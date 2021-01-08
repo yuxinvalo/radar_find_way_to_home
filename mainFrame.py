@@ -230,6 +230,7 @@ class MainFrame(QtWidgets.QWidget):
             # self.counterLabel.setText(str(len(self.findWayToHome.radarData)))
             self.counterLabel.setText(str(self.counter))
 
+
     def set_widgets_enable(self):
         self.filterConfigBtn.setEnabled(False)
         self.filterConfigBtn.setToolTip("Not implemented.")
@@ -238,6 +239,12 @@ class MainFrame(QtWidgets.QWidget):
         self.sysConfigBtn.setEnabled(False)
         self.sysConfigBtn.setToolTip("Not implemented.")
 
+    """
+    Initializing Connexions
+    Connect to Radar wireless, if en error occurs, returns ERROR CODE.
+    If program is success to connect radar, the radar wireless connectors will send a start instruction to radar
+    If use GPS check box is checked, the program will try to connect GPS with configurations.
+    """
     def init_connexion(self):
         self.conn = WirelessConnexion(self.basicRadarConfig)
         if self.conn.connect() == errorhandle.CONNECT_ERROR:
@@ -255,8 +262,12 @@ class MainFrame(QtWidgets.QWidget):
             if self.gpsconfView.gpsConn.reconnect() != 0:
                 QMessageBoxSample.showDialog(self, "Cant connect to GPS, deactivate GPS collection!")
                 self.basicGPSConfig["useGPS"] = False
+                return errorhandle.GPS_CONNECT_FAILURE
         return 0
 
+    """
+    This method will be invoked when user click start.
+    """
     def before_start_collection(self):
         logging.info("Start thread...")
         v = MeasTimesConfigDialog()
@@ -409,8 +420,8 @@ class MainFrame(QtWidgets.QWidget):
                 self.findWayToHome.radarNPData = reversePlots
             else:
                 self.findWayToHome.radarNPData = np.append(reversePlots, self.findWayToHome.radarNPData, axis=1)
-                if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-                    self.bscanPanel.scan_data_test(self.findWayToHome.radarData)
+                # if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
+                #     self.bscanPanel.scan_data_test(self.findWayToHome.radarData)
             # print(self.findWayToHome.radarNPData[:20, ])
             self.chartPanel.handle_data(cleanPlots)
 

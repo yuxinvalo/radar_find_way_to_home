@@ -128,7 +128,7 @@ def bin2mat_transform(bin_file,shape_h=1024,order='F'):
     assert bin_file.suffix == '.bin'
     data = np.fromfile(str(bin_file), dtype=np.float64)
     data = data.reshape(shape_h, int(len(data) / shape_h), order=order)
-    # data = data[:, :5000]
+    data = data[:, :11000]
     return data.T
 
 def bin2mat_transform2(bin_file,shape_h=1024,order='F'):
@@ -142,7 +142,7 @@ def bin2mat_transform2(bin_file,shape_h=1024,order='F'):
     assert bin_file.suffix == '.bin'
     data = np.fromfile(str(bin_file), dtype=np.float64)
     data = data.reshape(shape_h, int(len(data) / shape_h), order=order)
-    # data = data[:, 0:-1]
+    data = data[:, -10000:-1]
     return data.T
 
 # data = loadFile("2020-12-30-19-44-24.pkl")
