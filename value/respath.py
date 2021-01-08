@@ -1,0 +1,10 @@
+APP_ICON = ""
+STOP_ICON = "res/Stop32-1.ico"
+START_ICON = "res/Start32-3.ico"
+GPS_CONFIG_ICON = "res/png-0011.png"
+RADAR_CONFIG_ICON = "res/png-0011.png"
+SYSTEM_CONFIG_ICON = "res/png-0011.png"
+MESWHELL_CONFIG_ICON = "res/png-0011.png"
+PATH_CONFIG_ICON = "res/png-0057.png"
+
+DEFAULT_DATA_NAME = "F:/RadarCAS/data/"
