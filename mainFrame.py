@@ -222,6 +222,10 @@ class MainFrame(QtWidgets.QWidget):
         self.counterTimer.timeout.connect(self.counter_data)
         self.counterTimer.start(self.basicRadarConfig.get("receiveFreq") * 100)
 
+    """
+    Counter data number thread will invoke this method to refresh the number
+    """
+
     def counter_data(self):
         if not self.realTime:
             # self.counterLabel.setText(str(len(self.findWayToHome.radarData)))
@@ -229,7 +233,6 @@ class MainFrame(QtWidgets.QWidget):
         else:
             # self.counterLabel.setText(str(len(self.findWayToHome.radarData)))
             self.counterLabel.setText(str(self.counter))
-
 
     def set_widgets_enable(self):
         self.filterConfigBtn.setEnabled(False)
@@ -245,6 +248,7 @@ class MainFrame(QtWidgets.QWidget):
     If program is success to connect radar, the radar wireless connectors will send a start instruction to radar
     If use GPS check box is checked, the program will try to connect GPS with configurations.
     """
+
     def init_connexion(self):
         self.conn = WirelessConnexion(self.basicRadarConfig)
         if self.conn.connect() == errorhandle.CONNECT_ERROR:
@@ -267,6 +271,12 @@ class MainFrame(QtWidgets.QWidget):
 
     """
     This method will be invoked when user click start.
+    1. Select the mode of measurement, Prior or Unregistered, the unregistered mode can not be selected if prior mode 
+        hasn't been operated.
+    2. Check connexions of Radar and GPS if use GPS is checked. The threads will not start if connexions failures.
+   
+    3.  While 2 and 3 is right configured, the collections thread will start to work. And the configuration buttons 
+        deactivate.
     """
     def before_start_collection(self):
         logging.info("Start thread...")
@@ -274,7 +284,7 @@ class MainFrame(QtWidgets.QWidget):
         if v.exec_():
             res = v.get_data()
             logging.info(
-                "(3: Prior, Go, Returen | 4: Prior, Go, Go | 2: Unregistered  | 0: Reject) MeasTimes is " + str(res))
+                "(4: Prior, Go, Returen | 5: Prior, Go, Go | 2: Unregistered  | 0: Reject) MeasTimes is " + str(res))
             if res == 0:
                 return
             if res != errorhandle.UNKNOWN_MEAS_TIMES:
@@ -304,13 +314,13 @@ class MainFrame(QtWidgets.QWidget):
             if self.measTimes == 1:
                 # Reverse matrix because of real time radar data format
                 self.mockData = toolsradarcas.bin2mat_transform(
-                    Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_4.bin')))
+                    Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_5.bin')))
                 self.mockGPSData = Tools.GPRGPSReader(Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_4.GPR'))).T
                 logging.info("Mock GPS DATA Length: " + str(len(self.mockGPSData)))
                 self.collectGPSThread.start()
             elif self.measTimes == 2:
                 self.mockData = toolsradarcas.bin2mat_transform2(
-                    Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_5.bin')))
+                    Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_4.bin')))
             # =============================================================
 
         self.collectRadarThread.start()
@@ -322,9 +332,22 @@ class MainFrame(QtWidgets.QWidget):
         self.gpsConfigBtn.setEnabled(False)
 
         # Start find way to home Algo
-        logging.info("Start Algo")
         self.calculateThread.start()
 
+    """
+    Calculate method starts while the program collects the data, the frequency of invoking this method is defined 
+    at appconfig.py, beware that the frequency of calculate must not be faster than collection! 
+    It calculate the feats according to measurement mode(prior or unregistered).
+    这个调用的频率需要设置得很小心，在prior计算中由于窗口间隔为5， 计算频率*5不能高于收集数据的频率，否则无法判断是否停止计算。
+    1. Prior Mode: 
+        while collect data length > next window index: calculate window's feat(Ex: 417 > 416, it calculate first window)
+        while collect data length < next window index and it has at least one window: (Ex: 813 < 816, it stops calculate)
+            calculate stop itself
+            save radar, gps, feats data 
+    2. Unregistered Mode:
+        while collect data length > next window index: calculate window's feat
+        while 
+    """
     def start_calculate_action(self):
         print("Start calculate")
         if self.measTimes == 1:
@@ -378,6 +401,16 @@ class MainFrame(QtWidgets.QWidget):
                 # self.findWayToHome = FindWayToHome(self.basicRadarConfig)
         self.lastCounter = self.counter
 
+    """
+    Radar data collector thread will invoke this method with frequency define at appconfig.py
+    There is 2 mode of collection: realtime or not realtime
+    RealTime Mode: 
+        1. Use realtime radar and gps data
+        2. Radar send back a chain of bytes according to sample points number(512 or 1024), if an error occurs, 
+        skip to next collection turn.
+        3. Convert bytes data to 
+        
+    """
     def start_radar_collection_action(self):
         # logging.info("Start Radar collection...Radar length: " + str(len(self.findWayToHome.radarData)))
         if self.realTime:
@@ -419,9 +452,9 @@ class MainFrame(QtWidgets.QWidget):
             if self.findWayToHome.radarNPData.shape == (1, 1):
                 self.findWayToHome.radarNPData = reversePlots
             else:
-                self.findWayToHome.radarNPData = np.append(reversePlots, self.findWayToHome.radarNPData, axis=1)
-                # if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-                #     self.bscanPanel.scan_data_test(self.findWayToHome.radarData)
+                self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
+                if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
+                    self.bscanPanel.scan_data_test(self.findWayToHome.radarData[-1000:-1])
             # print(self.findWayToHome.radarNPData[:20, ])
             self.chartPanel.handle_data(cleanPlots)
 
@@ -558,6 +591,7 @@ class MainFrame(QtWidgets.QWidget):
             self.realTime = False
         else:
             self.realTime = True
+
 
 class WorkThread(QThread):
     _signal_updateUI = pyqtSignal()

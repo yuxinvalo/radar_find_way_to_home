@@ -28,8 +28,8 @@ def cleanRealTimeData(aTuple):
 def saveDataNumpy(data, filepath, instType='radar'):
     import numpy as np
     if not filepath:
-        filename = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-        filepath = respath.DEFAULT_DATA_NAME + filename + '-' + instType + '.npy'
+        filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
+        filepath = respath.DEFAULT_DATA_NAME + filename + '_' + instType + '.npy'
     np.save(filepath, data)
 
 
@@ -46,7 +46,7 @@ def saveData(data, filepath='', format='pickle', instType='radar', times=0):
 
 def saveDataGPR(data, filepath=''):
     try:
-        filename = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()) + '.GBR'
+        filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()) + '.GBR'
         if not filepath:
             filepath = respath.DEFAULT_DATA_NAME + filename
         else:
@@ -62,9 +62,9 @@ def saveDataGPR(data, filepath=''):
 def saveDataPickle(data, filepath='', instType='radar', times=0):
     import pickle
     if times != 0:
-        filename = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()) + '-' + instType + str(times) + '.pkl'
+        filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()) + '_' + instType + str(times) + '.pkl'
     else:
-        filename = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()) + '-' + instType + '.pkl'
+        filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()) + '_' + instType + '.pkl'
     if not filepath:
         filepath = respath.DEFAULT_DATA_NAME + filename
     else:
@@ -117,7 +117,8 @@ def list2numpy(data, dataType='byte'):
         arr = np.asarray(data)
     return arr
 
-def bin2mat_transform(bin_file,shape_h=1024,order='F'):
+
+def bin2mat_transform(bin_file, shape_h=1024, order='F'):
     '''
     将bin文件转成numpy矩阵形式
     RadarViewer输出的bin order是F
@@ -131,7 +132,8 @@ def bin2mat_transform(bin_file,shape_h=1024,order='F'):
     data = data[:, :11000]
     return data.T
 
-def bin2mat_transform2(bin_file,shape_h=1024,order='F'):
+
+def bin2mat_transform2(bin_file, shape_h=1024, order='F'):
     '''
     将bin文件转成numpy矩阵形式
     RadarViewer输出的bin order是F
@@ -145,7 +147,7 @@ def bin2mat_transform2(bin_file,shape_h=1024,order='F'):
     data = data[:, -10000:-1]
     return data.T
 
-# data = loadFile("2020-12-30-19-44-24.pkl")
+# data = loadFile("2020_12_30_19_44_24.pkl")
 # print(type(data))
 # print(type(data[0]))
 # dataint = byte2signedInt(data[0])
@@ -156,9 +158,9 @@ def bin2mat_transform2(bin_file,shape_h=1024,order='F'):
 # print(type(arr))
 # print(arr)
 
-# data = loadFile("2020-12-30-19-44-24.pkl")
+# data = loadFile("2020_12_30_19_44_24.pkl")
 # saveData(data, filepath='', format='npy')
-# data = loadFile(filename="2020-12-30-22-07-35.npy")
+# data = loadFile(filename="2020_12_30_22_07_35.npy")
 # for i in data:
 #     print(len(i))
 #     print(list(i))

@@ -34,7 +34,7 @@ def basic_radar_config():
         "writeTimeOut": 3,
         "maxConnTry": 2,
         "bytesNum": 2048,
-        "bscanRefreshInterval": 400,  # Refresh view per 100 line data
+        "bscanRefreshInterval": 1000,  # Refresh view per 100 line data
         "receiveFreq": 0.08,  # Unit: second
         "calculateFreq": 0.5,
         "patchSize": 416,

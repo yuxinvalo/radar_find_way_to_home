@@ -57,12 +57,12 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.sampleNumCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("sampleNum"))))
         self.sampleNumCombox.setItemText(0, str(int(self.defaultConf.get("bytesNum") / 2)))
 
-        # self.sampleFreq = QtWidgets.QLabel(strs.strings.get("sampleFreq")[appconfig.language])
-        # self.sampleFreq.setObjectName("sampleFreq")
-        # self.sampleFreqCombox = QtWidgets.QComboBox(self)
-        # self.sampleFreqCombox.setObjectName("sampleFreqCombox")
-        # self.sampleFreqCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("sampleFreq"))))
-        # self.sampleFreqCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
+        self.sampleFreq = QtWidgets.QLabel(strs.strings.get("sampleFreq")[appconfig.language])
+        self.sampleFreq.setObjectName("sampleFreq")
+        self.sampleFreqCombox = QtWidgets.QComboBox(self)
+        self.sampleFreqCombox.setObjectName("sampleFreqCombox")
+        self.sampleFreqCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("sampleFreq"))))
+        self.sampleFreqCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
         #
         # self.gainMode = QtWidgets.QLabel(strs.strings.get("gainMode")[appconfig.language])
         # self.gainMode.setObjectName("gainMode")
@@ -127,12 +127,12 @@ class RadarConfigurationDialog(ConfigurationDialog):
         # self.trigModeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("trigMode"))))
         # self.trigModeCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
         #
-        # self.collectionMode = QtWidgets.QLabel(strs.strings.get("collectionMode")[appconfig.language])
-        # self.collectionMode.setObjectName("collectionMode")
-        # self.collectionModeCombox = QtWidgets.QComboBox(self)
-        # self.collectionModeCombox.setObjectName("collectionModeCombox")
-        # self.collectionModeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("collectionMode"))))
-        # self.collectionModeCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
+        self.collectionMode = QtWidgets.QLabel(strs.strings.get("collectionMode")[appconfig.language])
+        self.collectionMode.setObjectName("collectionMode")
+        self.collectionModeCombox = QtWidgets.QComboBox(self)
+        self.collectionModeCombox.setObjectName("collectionModeCombox")
+        self.collectionModeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("collectionMode"))))
+        self.collectionModeCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
 
         # self.filePrefix = QtWidgets.QLabel(strs.strings.get("filePrefix")[appconfig.language])
         # self.filePrefix.setObjectName("filePrefix")
@@ -144,7 +144,7 @@ class RadarConfigurationDialog(ConfigurationDialog):
         # self.configLayout.addRow(strs.strings.get("radarType")[appconfig.language], self.radarTypeCombox)
         # self.configLayout.addRow(strs.strings.get("permittivity")[appconfig.language], self.permittivityCombox)
         self.configLayout.addRow(strs.strings.get("sampleNum")[appconfig.language], self.sampleNumCombox)
-        # self.configLayout.addRow(strs.strings.get("sampleFreq")[appconfig.language], self.sampleFreqCombox)
+        self.configLayout.addRow(strs.strings.get("sampleFreq")[appconfig.language], self.sampleFreqCombox)
         self.configLayout.addRow(strs.strings.get("patchSize")[appconfig.language], self.patchSizeEdit)
         self.configLayout.addRow(strs.strings.get("deltaDist")[appconfig.language], self.deltaDistEdit)
         self.configLayout.addRow(strs.strings.get("firstCutRow")[appconfig.language], self.firstCutRowEdit)
@@ -153,7 +153,7 @@ class RadarConfigurationDialog(ConfigurationDialog):
                                  self.unregisteredMapIntervalEdit)
         # self.configLayout.addRow(strs.strings.get("measureAccuracy")[appconfig.language], self.measureAccuracyCombox)
         # self.configLayout.addRow(strs.strings.get("trigMode")[appconfig.language], self.trigModeCombox)
-        # self.configLayout.addRow(strs.strings.get("collectionMode")[appconfig.language], self.collectionModeCombox)
+        self.configLayout.addRow(strs.strings.get("collectionMode")[appconfig.language], self.collectionModeCombox)
         # self.configLayout.addRow(strs.strings.get("filePrefix")[appconfig.language], self.filePrefixEdit)
         # self.configLayout.addRow('', self.radarParamInfo)
         # self.radarParamInfo.setText(str(self.get_data()))
@@ -214,7 +214,7 @@ class RadarConfigurationDialog(ConfigurationDialog):
         radarSettings = {
             # "radarType": self.radarTypeCombox.currentText(), "permittivity": self.permittivityCombox.currentText(),
             "sampleNum": self.sampleNumCombox.currentText(),
-            # "sampleFreq": self.sampleFreqCombox.currentText(),
+            "sampleFreq": self.sampleFreqCombox.currentText(),
             # "gainMode": self.gainModeCombox.currentText(),
             "patchSize": int(self.patchSizeEdit.text()),
             "deltaDist": float(self.deltaDistEdit.text()),
@@ -223,7 +223,8 @@ class RadarConfigurationDialog(ConfigurationDialog):
             "unregisteredMapInterval": int(self.unregisteredMapIntervalEdit.text()),
             # "timeLag": self.timeLagEdit.text(),
             # "accumTime": self.accumTimeCombox.currentText(), "measureAccuracy": self.measureAccuracyCombox.currentText(),
-            # "trigMode": self.trigModeCombox.currentText(), "collectionMode": self.collectionModeCombox.currentText(),
+            # "trigMode": self.trigModeCombox.currentText(),
+            "collectionMode": self.collectionModeCombox.currentText(),
             # "filePrefix": self.filePrefixEdit.text()
         }
         return radarSettings
