@@ -27,28 +27,10 @@ class RadarConfigurationDialog(ConfigurationDialog):
 
         self.mainGrid = QGridLayout()
         self.configLayout = QFormLayout()
-        # self.waveLayout = QtWidgets.QHBoxLayout()
         self.mainGrid.addLayout(self.configLayout, 0, 0)
-        # self.mainGrid.addLayout(self.waveLayout, 0, 1)
         self.buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)  # 窗口中建立确认和取消按钮
         self.mainGrid.addWidget(self.buttons, 1, 0)
-
-        # self.radarParamInfo = QtWidgets.QTextBrowser()
-
-        # self.radarType = QtWidgets.QLabel(strs.strings.get("radarType")[appconfig.language])
-        # self.radarType.setObjectName("radarType")
-        # self.radarTypeCombox = QtWidgets.QComboBox(self)
-        # self.radarTypeCombox.setObjectName("radarTypeCombox")
-        # self.radarTypeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("radarType"))))
-        # self.radarTypeCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
-        #
-        # self.permittivity = QtWidgets.QLabel(strs.strings.get("permittivity")[appconfig.language])
-        # self.permittivity.setObjectName("permittivity")
-        # self.permittivityCombox = QtWidgets.QComboBox(self)
-        # self.permittivityCombox.setObjectName("permittivityCombox")
-        # self.permittivityCombox.addItems(self.checkList(strs.combobox.get("permittivity")))
-        # self.permittivityCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
 
         self.sampleNum = QtWidgets.QLabel(strs.strings.get("sampleNum")[appconfig.language])
         self.sampleNum.setObjectName("sampleNum")
@@ -62,14 +44,6 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.sampleFreqCombox = QtWidgets.QComboBox(self)
         self.sampleFreqCombox.setObjectName("sampleFreqCombox")
         self.sampleFreqCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("sampleFreq"))))
-        self.sampleFreqCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
-        #
-        # self.gainMode = QtWidgets.QLabel(strs.strings.get("gainMode")[appconfig.language])
-        # self.gainMode.setObjectName("gainMode")
-        # self.gainModeCombox = QtWidgets.QComboBox(self)
-        # self.gainModeCombox.setObjectName("gainModeCombox")
-        # self.gainModeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("gainMode"))))
-        # self.gainModeCombox.setEnabled(False)
 
         self.patchSize = QtWidgets.QLabel(strs.strings.get("patchSize")[appconfig.language])
         self.patchSize.setObjectName("patchSize")
@@ -104,45 +78,13 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.unregisteredMapIntervalEdit.setObjectName("unregisteredMapIntervalEdit")
         self.unregisteredMapIntervalEdit.setText(str(self.defaultConf.get("unregisteredMapInterval")))
         self.unregisteredMapIntervalEdit.setValidator(QIntValidator(0, 10000))
-        # self.firstCutRowEdit.textChanged.connect(self.refreshRadarParamInfo)
-        #
-        # self.accumTime = QtWidgets.QLabel(strs.strings.get("accumTime")[appconfig.language])
-        # self.accumTime.setObjectName("accumTime")
-        # self.accumTimeCombox = QtWidgets.QComboBox(self)
-        # self.accumTimeCombox.setObjectName("accumTimeCombox")
-        # self.accumTimeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("accumTime"))))
-        # self.accumTimeCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
-        #
-        # self.measureAccuracy = QtWidgets.QLabel(strs.strings.get("measureAccuracy")[appconfig.language])
-        # self.measureAccuracy.setObjectName("measureAccuracy")
-        # self.measureAccuracyCombox = QtWidgets.QComboBox(self)
-        # self.measureAccuracyCombox.setObjectName("measureAccuracyCombox")
-        # self.measureAccuracyCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("measureAccuracy"))))
-        # self.measureAccuracyCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
-        #
-        # self.trigMode = QtWidgets.QLabel(strs.strings.get("trigMode")[appconfig.language])
-        # self.trigMode.setObjectName("trigMode")
-        # self.trigModeCombox = QtWidgets.QComboBox(self)
-        # self.trigModeCombox.setObjectName("trigModeCombox")
-        # self.trigModeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("trigMode"))))
-        # self.trigModeCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
-        #
+
         self.collectionMode = QtWidgets.QLabel(strs.strings.get("collectionMode")[appconfig.language])
         self.collectionMode.setObjectName("collectionMode")
         self.collectionModeCombox = QtWidgets.QComboBox(self)
         self.collectionModeCombox.setObjectName("collectionModeCombox")
         self.collectionModeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("collectionMode"))))
-        self.collectionModeCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
 
-        # self.filePrefix = QtWidgets.QLabel(strs.strings.get("filePrefix")[appconfig.language])
-        # self.filePrefix.setObjectName("filePrefix")
-        # self.filePrefixEdit = QtWidgets.QLineEdit()
-        # self.filePrefixEdit.setObjectName("filePrefix")
-        # self.filePrefixEdit.setText(strs.placeholder.get("filePrefix"))
-        # self.filePrefixEdit.setEnabled(False)
-
-        # self.configLayout.addRow(strs.strings.get("radarType")[appconfig.language], self.radarTypeCombox)
-        # self.configLayout.addRow(strs.strings.get("permittivity")[appconfig.language], self.permittivityCombox)
         self.configLayout.addRow(strs.strings.get("sampleNum")[appconfig.language], self.sampleNumCombox)
         self.configLayout.addRow(strs.strings.get("sampleFreq")[appconfig.language], self.sampleFreqCombox)
         self.configLayout.addRow(strs.strings.get("patchSize")[appconfig.language], self.patchSizeEdit)
@@ -151,15 +93,7 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.configLayout.addRow(strs.strings.get("priorMapInterval")[appconfig.language], self.priorMapIntervalEdit)
         self.configLayout.addRow(strs.strings.get("unregisteredMapInterval")[appconfig.language],
                                  self.unregisteredMapIntervalEdit)
-        # self.configLayout.addRow(strs.strings.get("measureAccuracy")[appconfig.language], self.measureAccuracyCombox)
-        # self.configLayout.addRow(strs.strings.get("trigMode")[appconfig.language], self.trigModeCombox)
         self.configLayout.addRow(strs.strings.get("collectionMode")[appconfig.language], self.collectionModeCombox)
-        # self.configLayout.addRow(strs.strings.get("filePrefix")[appconfig.language], self.filePrefixEdit)
-        # self.configLayout.addRow('', self.radarParamInfo)
-        # self.radarParamInfo.setText(str(self.get_data()))
-        # self.sampleNumCombox.currentTextChanged.connect(self.refreshRadarParamInfo)
-        # self.deltaDistEdit.textChanged.connect(self.refreshRadarParamInfo)
-        # self.patchSizeEdit.textChanged.connect(self.refreshRadarParamInfo)
 
         # PyQt chart
         self.placeholder = QtWidgets.QLabel("This is a wave show place holder!!!!")
@@ -170,8 +104,6 @@ class RadarConfigurationDialog(ConfigurationDialog):
 
         self.setLayout(self.mainGrid)
 
-    def refreshRadarParamInfo(self):
-        self.radarParamInfo.setText(str(self.get_data()))
 
     def get_data(self):
         # if not self.deltaDistEdit.text() or not self.patchSizeEdit.text():
@@ -212,20 +144,14 @@ class RadarConfigurationDialog(ConfigurationDialog):
             return
 
         radarSettings = {
-            # "radarType": self.radarTypeCombox.currentText(), "permittivity": self.permittivityCombox.currentText(),
             "sampleNum": self.sampleNumCombox.currentText(),
             "sampleFreq": self.sampleFreqCombox.currentText(),
-            # "gainMode": self.gainModeCombox.currentText(),
             "patchSize": int(self.patchSizeEdit.text()),
             "deltaDist": float(self.deltaDistEdit.text()),
             "firstCutRow": int(self.firstCutRowEdit.text()),
             "priorMapInterval": int(self.priorMapIntervalEdit.text()),
             "unregisteredMapInterval": int(self.unregisteredMapIntervalEdit.text()),
-            # "timeLag": self.timeLagEdit.text(),
-            # "accumTime": self.accumTimeCombox.currentText(), "measureAccuracy": self.measureAccuracyCombox.currentText(),
-            # "trigMode": self.trigModeCombox.currentText(),
             "collectionMode": self.collectionModeCombox.currentText(),
-            # "filePrefix": self.filePrefixEdit.text()
         }
         return radarSettings
 
@@ -235,17 +161,6 @@ class RadarConfigurationDialog(ConfigurationDialog):
     def load_config(self):
         pass
 
-    # def set_widget_enable(self):
-    #     self.radarTypeCombox.setEnabled(False)
-    #     self.permittivityCombox.setEnabled(False)
-    #     self.collectionModeCombox.setEnabled(False)
-    #     self.sampleFreqCombox.setEnabled(False)
-    #     self.gainValueEdit.setEnabled(False)
-    #     self.filePrefixEdit.setEnabled(False)
-    #     self.accumTimeCombox.setEnabled(False)
-    #     self.measureAccuracyCombox.setEnabled(False)
-    #     self.trigLvlEdit.setEnabled(False)
-    #     self.timeLagEdit.setEnabled(False)
 
 # if __name__ == "__main__":
 #     import sys

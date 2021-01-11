@@ -456,19 +456,13 @@ class MainFrame(QtWidgets.QWidget):
             else:
                 self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
                 if self.findWayToHome.radarNPData.shape[1] % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-                    self.bscanPanel.scan_data_test(self.findWayToHome.radarNPData[-1000:-1, :].T)
+                    self.bscanPanel.plot_bscan(self.findWayToHome.radarNPData[:, -1000:-1].T)
 
                 print("radar data length:" + str(self.findWayToHome.radarNPData.shape[1]) + " | gps data length:"
                       + str(len(self.findWayToHome.gpsData)))
             self.chartPanel.handle_data(cleanPlots)
 
         else:  # Mock realtime data
-            """ Mocked by realTime from pickle file
-            aTuple = self.mockData[self.counter]
-            plots = toolsradarcas.byte2signedInt(aTuple)
-            cleanPlots = toolsradarcas.cleanRealTimeData(plots)
-            self.findWayToHome.radarData.append(plots)
-            """
             cleanPlots = self.mockData[self.counter].tolist()
             # self.findWayToHome.radarData.append(cleanPlots)
             reversePlots = np.expand_dims(np.asarray(cleanPlots).T, axis=1)
@@ -478,7 +472,7 @@ class MainFrame(QtWidgets.QWidget):
             else:
                 self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
                 if self.findWayToHome.radarNPData.shape[1] % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-                    self.bscanPanel.scan_data_test(self.findWayToHome.radarNPData[-1000:-1, :].T)
+                    self.bscanPanel.plot_bscan(self.findWayToHome.radarNPData[:, -1000:-1].T)
                 if self.findWayToHome.radarNPData.shape[1] == len(self.mockData):
                     logging.info("Mock data length is over....")
                     self.stop_collection_action()
@@ -631,20 +625,32 @@ class MainFrame(QtWidgets.QWidget):
 
 
     def load_origin_data(self):
-        self.findWayToHome.radarNPData = toolsradarcas.loadFile("2021_01_11_14_40_29_radar1.pkl")
-        self.findWayToHome.gpsNPData = np.array(toolsradarcas.loadFile("2021_01_11_14_40_30_gps1.pkl")).T[:2, :]
-        self.findWayToHome.priorFeats = toolsradarcas.loadFile("2021_01_11_14_40_30_feats1.pkl")
+        """
+        Just for debug unregistered measurement
+        """
+        # self.findWayToHome.radarNPData = toolsradarcas.loadFile("2021_01_11_16_38_17_radar1.pkl")
+        self.findWayToHome.gpsNPData = toolsradarcas.loadFile("2021_01_11_16_38_17_gps1.pkl")
+        self.findWayToHome.priorFeats = toolsradarcas.loadFile("2021_01_11_16_38_17_feats1.pkl")
+        logging.info(self.findWayToHome.radarNPData.shape)
+        logging.info(self.findWayToHome.gpsNPData.shape)
+        logging.info(self.findWayToHome.priorFeats.shape)
+        for i in range(self.findWayToHome.priorFeats.shape[0]):
+            self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
+        self.radarNPData = np.zeros((1, 1))
+        self.windows = []
         self.findWayToHome.files = [1 ,2 ,3]
         self.findWayToHome.firstDBIndexes = [index for index in np.arange(415, self.findWayToHome.radarNPData.shape[1], 5)]
+        logging.info(self.findWayToHome.firstDBIndexes)
         self.priorCounterLable.setText(str(self.findWayToHome.radarNPData.shape[1]))
 
-"""
-Thread class, it creates a thread and offer ways to control threads.
-@Arguments: 
-    freq: Timing interval between 2 invokes
-    isexit: Stop the thread or just make it in waiting status
-"""
+
 class WorkThread(QThread):
+    """
+    Thread class, it creates a thread and offer ways to control threads.
+        Attributes:
+            freq: Timing interval between 2 invokes
+            isexit: Stop the thread or just make it in waiting status
+    """
     _signal_updateUI = pyqtSignal()
 
     def __init__(self, parent=None, freq=0.1):

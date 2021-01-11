@@ -36,7 +36,7 @@ def basic_radar_config():
         "bytesNum": 2048,
         "bscanRefreshInterval": 1000,  # Refresh view per 100 line data
         "receiveFreq": 0.1,  # Unit: second
-        "calculateFreq": 0.3,
+        "calculateFreq": 0.5,
         "patchSize": 416,
         "priorMapInterval": 5,
         "unregisteredMapInterval": 400,

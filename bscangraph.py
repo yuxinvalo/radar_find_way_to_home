@@ -29,7 +29,7 @@ class BscanGraph(FigureCanvas):
                                    QtWidgets.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def scan_data_test(self, refreshData):
+    def plot_bscan(self, refreshData):
         # data = tools.list2numpy(lineDataByte)
         # lineDataList = [refreshData]
         lineDataNP = np.asarray(refreshData)

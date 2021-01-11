@@ -129,6 +129,7 @@ def bin2mat_transform(bin_file, shape_h=1024, order='F'):
     assert bin_file.suffix == '.bin'
     data = np.fromfile(str(bin_file), dtype=np.float64)
     data = data.reshape(shape_h, int(len(data) / shape_h), order=order)
+    # data = np.fliplr(data[:, :18000])
     data = data[:, :18000]
     return data.T
 
@@ -144,6 +145,7 @@ def bin2mat_transform2(bin_file, shape_h=1024, order='F'):
     assert bin_file.suffix == '.bin'
     data = np.fromfile(str(bin_file), dtype=np.float64)
     data = data.reshape(shape_h, int(len(data) / shape_h), order=order)
+    # data = np.fliplr(data[:, -18000:-1])
     data = data[:, -18000:-1]
     return data.T
 
