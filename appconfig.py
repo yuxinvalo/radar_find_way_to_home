@@ -35,8 +35,8 @@ def basic_radar_config():
         "maxConnTry": 2,
         "bytesNum": 2048,
         "bscanRefreshInterval": 1000,  # Refresh view per 100 line data
-        "receiveFreq": 0.08,  # Unit: second
-        "calculateFreq": 0.5,
+        "receiveFreq": 0.1,  # Unit: second
+        "calculateFreq": 0.3,
         "patchSize": 416,
         "priorMapInterval": 5,
         "unregisteredMapInterval": 400,
@@ -48,7 +48,7 @@ def basic_radar_config():
 
 def basic_gps_config():
     basicGPSConfig = {
-        "receiveFreq": 0.08,
+        "receiveFreq": 0.1,
         "serialNum": 'COM3',
         "baudRate": 9600,
         "parityBit": 'NONE',
@@ -62,7 +62,9 @@ def basic_gps_config():
 def basic_instruct_config():
     instructions = {
         "start": [0x00, 0xFF],
-        "stop": [0x00, 0x00]
+        "stop": [0x00, 0x00],
+        "bytesNum": [0x0A],
+        "precise": [0x0B],
     }
     return instructions
 

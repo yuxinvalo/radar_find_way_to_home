@@ -23,6 +23,9 @@ strings = {
     "choosePath": ['选择文件保存路径', 'Choose a path to save'],
     "currSavePath": ['当前保存路径: ', 'Current save path: '],
 
+    "priorCounter": ['Prior数据长度', 'Prior Data Length'],
+    "unregisteredCounter": ['Unregistered数据长度', 'Unrgt. Data Length'],
+
     "yes": ['确定', 'YES'],
     "no": ['取消', 'NO'],
     'others': ['其他', 'Other'],

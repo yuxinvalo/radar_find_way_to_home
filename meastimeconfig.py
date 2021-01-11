@@ -65,11 +65,11 @@ class MeasTimesConfigDialog(ConfigurationDialog):
 
     def get_data(self):
         if self.firstTimeButton.isChecked() and self.allerRetourButton.isChecked():
-            return FIRST_MEAS + ALLER_RETOUR
+            return FIRST_MEAS + ALLER_RETOUR, QtWidgets.QDialog.Accepted
         elif self.firstTimeButton.isChecked() and self.allerAllerButton.isChecked():
-            return FIRST_MEAS + ALLER_ALLER
+            return FIRST_MEAS + ALLER_ALLER, QtWidgets.QDialog.Accepted
         elif self.secondTimeButton.isChecked():
-            return SECOND_MEAS
+            return SECOND_MEAS, QtWidgets.QDialog.Accepted
         else:
             return errorhandle.UNKNOWN_MEAS_TIMES
 

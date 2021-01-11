@@ -18,12 +18,24 @@ RADAR_FILE_INDEX = 0
 GPS_FILE_INDEX = 1
 FEATS_FILE_INDEX = 2
 
+
 def tf_config():
     config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
     sess = tf.Session(config=config)
 
 
 class FindWayToHome(object):
+    """
+    FindWayToHome class is used to execute the tensorflow calculate and save the useful data(GPS and Radar and Feats)
+
+    Attributes:
+        patchSize: configured at appconfig.py, the patch size for each window
+        samplePoints: the number points of the data that radar send back
+        firstCutRow: for a chain of data like (1, 1024), it will be slice from firstCutRow to firstCutRow + patchSize
+        priorMapInterval: for the prior measurement, set the interval between 2 windows
+        unregisteredMapInterval: for the unregistered measurement, set the interval between 2 windows
+        deltaDist: the distance between 2 measurements
+    """
     def __init__(self, patchSize, samplePoints, firstCutRow, priorMapInterval, unregisteredMapInterval, deltaDist):
         super(FindWayToHome, self).__init__()
         self.init_tf()
@@ -33,15 +45,13 @@ class FindWayToHome(object):
         self.priorMapInterval = priorMapInterval
         self.unregisteredMapInterval = unregisteredMapInterval
         self.deltaDist = deltaDist
-        self.radarData = []
+        # self.radarData = []
         self.radarNPData = np.zeros((1, 1))  # This will be a numpy format variable
         self.gpsData = []
         self.gpsNPData = []
         self.priorFeats = []
-        self.secondFeats = []
         self.firstDBIndexes = []
         self.secondDBIndexes = []
-        self.radarRawData = []
         self.files = []  # save feats, gps, radar origin data file path
         self.interval = self.unregisteredMapInterval / self.priorMapInterval
         self.GPStrack = []
@@ -49,9 +59,12 @@ class FindWayToHome(object):
         self.waitToMatch = []
         self.unregisteredMapPos = []
         self.priorMapPos = []
-        self.priorWindows = []
+        self.windows = []
 
     def load_config(self, algoConfig):
+        """
+            In case of configurations changed, reload the current configuration
+        """
         self.samplePoints = int(algoConfig.get("sampleNum"))
         self.patchSize = algoConfig.get("patchSize")  # 第一次测量时选择的切片道数 默认416， 可在雷达设置里改
         self.firstCutRow = algoConfig.get("firstCutRow")
@@ -60,6 +73,9 @@ class FindWayToHome(object):
         self.deltaDist = algoConfig.get("deltaDist")
 
     def init_tf(self):
+        """
+            Initializing the tensorflow backend
+        """
         from myfrcnn_img_retrieve_for_c import myFRCNN_img_retrieve
         tf_config()
         self.frcnn = myFRCNN_img_retrieve()
@@ -71,15 +87,18 @@ class FindWayToHome(object):
         print("unregisteredMapInterval" + str(self.unregisteredMapInterval))
 
     def prior_find_way(self, numWindow, isClean=True, endGaindB=18, moveMode=ALLER_RETOUR):
+        """
+            Prior measurement algorithm, it's executed while radar data length is greater than @patchSize, and for each
+            @priorMapInterval data coming, it calculate the window's feat.
+
+            Attributes:
+                numWindow: the index of current window
+                isClean: is it a must to clean data
+                endGaindB: for cleaning data
+                moveMode: ALLER_RETOUR/ALLER_ALLER is equal to 来回走， 重复走
+        """
         if self.radarNPData.shape[1] < (numWindow * self.priorMapInterval) + self.patchSize:
             return errorhandle.FIRST_MEAS_DATANUM_LEAK
-
-        # Fill GPS Data
-        # if len(self.gpsData) > 0:
-        #     delta = len(self.radarData) - len(self.gpsData)
-        #     self.gpsData.extend([self.gpsData[-1]] * delta)
-        #     print("radar data length:" + str(len(self.radarData)) + " | gps data length:"
-        #           + str(len(self.gpsData)))
 
         # Reverse matrix to match algo need: 416 * N
         headIndex = self.priorMapInterval * numWindow
@@ -87,22 +106,24 @@ class FindWayToHome(object):
         singleWindowRadarData = self.radarNPData[self.firstCutRow:self.firstCutRow + self.patchSize,
                                 headIndex:headIndex + self.patchSize]
 
+        # self.fill_GPS_data()
+
         # print(singleWindowRadarData.shape)
         if numWindow < 5:
-            self.priorWindows.append(singleWindowRadarData)
+            self.windows.append(singleWindowRadarData)
 
         if isClean:
             singleWindowRadarData = RemoveBackground(singleWindowRadarData)
             singleWindowRadarData = LinearGain(singleWindowRadarData, end_gain_in_dB=endGaindB)
 
-        if moveMode == ALLER_RETOUR:
-            singleWindowRadarData = np.fliplr(singleWindowRadarData)
+        # if moveMode == ALLER_RETOUR:
+        #     singleWindowRadarData = np.fliplr(singleWindowRadarData)
 
         # 读取每道数据对应的GPS信息并处理
         # Mocks Data:
         if numWindow == 0:
             windowsGPSXYZMatrix = np.array(self.gpsData[headIndex:headIndex + self.patchSize]).T
-            print("single GPS window shape: ", end=" ")
+            # print("single GPS window shape: ", end=" ")
             print(windowsGPSXYZMatrix.shape)
             windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
             if moveMode == ALLER_RETOUR:
@@ -111,18 +132,17 @@ class FindWayToHome(object):
         else:
             windowsGPSXYZMatrix = np.array(self.gpsData[headIndex + self.patchSize - 5:headIndex + self.patchSize]).T
             windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
-            print("single GPS window shape: ", end=' ')
+            # print("single GPS window shape: ", end=' ')
             print(windowsGPSXYZMatrix.shape)
             if moveMode == ALLER_RETOUR:
                 windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
             self.gpsNPData = np.append(self.gpsNPData, windowsGPSXYZMatrix, axis=1)
 
-        print(self.gpsNPData.shape)
+        # print(self.gpsNPData.shape)
 
         priorMap = np.expand_dims(singleWindowRadarData, axis=0)
 
         self.firstDBIndexes.append(numWindow * self.priorMapInterval + self.patchSize - 1)
-        # print(self.firstDBIndexes)
         image = priorMap[0, :, :]
 
         # TF handling
@@ -135,39 +155,67 @@ class FindWayToHome(object):
             self.priorFeats = np.append(self.priorFeats, feat_, axis=0)
             print("FIRST====NP add new feat: " + str(self.priorFeats.shape))
 
+    def fill_GPS_data(self):
+        """
+        This method is used to fill GPS data to ensure that radar data length is equals to GPS data length
+        """
+        # Fill GPS Data
+        delta = self.radarNPData.shape[1] - self.gpsNPData.shape[1]
+        if delta > 0:
+            repeatData = np.repeat([self.gpsNPData[-1]], repeats=delta, axis=0)
+            np.vstack([self.gpsNPData], repeatData)
+            print("radar data length:" + str(self.radarNPData.shape[1]) + " | gps data length:"
+                  + str(self.gpsNPData.shape[1]))
+
+    # def compare_feat(self, feat):
+    #     print("Compare first feat=============>")
+    #     originFeat = toolsradarcas.loadFile("feats1.pkl")
+    #     print("Feats shape: " + str(originFeat.shape == feat[0, :, :].shape))
+    #     # feat = normalize(feat[0, :, :], axis=1)
+    #     print("Feats data: " + str((originFeat == feat[0, :, :]).all()))
+
     def save_algo_data(self, times=1):
-        # TODO: save self.priorFeats and self.radarData and self.gpsData
-        # Save radarData
+        """
+            Save algorithm data will be invoked while measurement finish.
+            For prior measurement , the gps, radar and feats will be saved.
+            For unregistered measurement, just radar and feats are saved.
+            The data will be named like: YY_MM_DD_HH_MIN_SEC_gps/radar/feats_times.pkl
+
+            Attributes:
+                times: 1 means prior measurement, 2 means unregistered measurement
+        """
         if times == 1:
             self.files.append(toolsradarcas.saveData(self.radarNPData, format='pickle', times=1))
             # self.files.append(toolsradarcas.saveData(self.radarData, format='pickle', instType='raw', times=1))
-            self.files.append(toolsradarcas.saveData(self.gpsData, format='pickle', instType='gps', times=1))
+            self.files.append(toolsradarcas.saveData(self.gpsNPData, format='pickle', instType='gps', times=1))
             self.files.append(toolsradarcas.saveData(self.priorFeats, format='pickle', instType='feats', times=1))
-            self.files.append(toolsradarcas.saveData(self.priorWindows, format='pickle', instType='windows', times=1))
+            self.files.append(toolsradarcas.saveData(self.windows, format='pickle', instType='windows', times=1))
 
             # Prepare for second measurement
-            self.radarData = []
+            # self.radarData = []
             for i in range(self.priorFeats.shape[0]):
                 self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
             self.radarNPData = np.zeros((1, 1))
-            self.priorWindows = []
+            self.windows = []
         else:
-            self.files.append(toolsradarcas.saveData(self.radarData, format='pickle', times=2))
+            self.files.append(toolsradarcas.saveData(self.radarNPData, format='pickle', times=2))
             self.files.append(
                 toolsradarcas.saveData(self.unregisteredFeats, format='pickle', instType='feats', times=2))
-            self.files.append(toolsradarcas.saveData(self.priorWindows, format='pickle', instType='windows', times=2))
+            self.files.append(toolsradarcas.saveData(self.windows, format='pickle', instType='windows', times=2))
             self.sythetic_feats()
         # self.frcnn.close_session()
 
     def unregistered_find_way(self, numWindow, isClean=True, endGaindB=18):
-        # TODO: Add second measurement Algo
+        """
+        This function is similar to prior_find_way
+        """
         headIndex = self.unregisteredMapInterval * numWindow
         print("SECOND===headIndex: " + str(headIndex) + " | numWindow: " + str(numWindow))
 
         singleWindowRadarData = self.radarNPData[self.firstCutRow:self.firstCutRow + self.patchSize,
                                 headIndex:headIndex + self.patchSize]
 
-        self.priorWindows.append(singleWindowRadarData)
+        self.windows.append(singleWindowRadarData)
 
         if isClean:
             singleWindowRadarData = RemoveBackground(singleWindowRadarData)
