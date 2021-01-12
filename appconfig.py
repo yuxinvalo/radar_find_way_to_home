@@ -27,7 +27,6 @@ def basic_log_config(debug=True):
 
 def basic_radar_config():
     basicRadarConfig = {
-        # "collectionInterface": 'NET',
         "radarIP": '192.168.1.1',
         'radarPort': 5050,
         "readTimeOut": 5,
@@ -65,6 +64,7 @@ def basic_instruct_config():
         "stop": [0x00, 0x00],
         "bytesNum": [0x0A],
         "precise": [0x0B],
+        "sampleRate": [0x02],
     }
     return instructions
 

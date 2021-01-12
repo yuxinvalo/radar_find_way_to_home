@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QFileDialog, QApplication
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from pathlib2 import Path, PureWindowsPath
 import numpy as np
+from sklearn.preprocessing import normalize
 
 import Tools
 import appconfig
@@ -52,17 +53,18 @@ class MainFrame(QtWidgets.QWidget):
     3. Draw the view
     4. Create the threads and wait for user's instruction
     """
+
     def __init__(self):
         super(MainFrame, self).__init__()
         # Config
         appconfig.basic_log_config()
         self.basicRadarConfig = appconfig.basic_radar_config()
         self.basicGPSConfig = appconfig.basic_gps_config()
-        self.findWayToHome = FindWayToHome(self.basicRadarConfig.get("patchSize"), \
-                                           int(self.basicRadarConfig.get("bytesNum") / 2), \
-                                           int(self.basicRadarConfig.get("firstCutRow")), \
-                                           int(self.basicRadarConfig.get("priorMapInterval")), \
-                                           int(self.basicRadarConfig.get("unregisteredMapInterval")), \
+        self.findWayToHome = FindWayToHome(self.basicRadarConfig.get("patchSize"),
+                                           int(self.basicRadarConfig.get("bytesNum") / 2),
+                                           int(self.basicRadarConfig.get("firstCutRow")),
+                                           int(self.basicRadarConfig.get("priorMapInterval")),
+                                           int(self.basicRadarConfig.get("unregisteredMapInterval")),
                                            int(self.basicRadarConfig.get("deltaDist")))
         self.init_ui()
         self.init_toolbar()
@@ -75,6 +77,7 @@ class MainFrame(QtWidgets.QWidget):
         self.collectGPSThread.signal_updateUI.connect(self.start_gps_collection_action)
         self.calculateThread = WorkThread(freq=self.basicRadarConfig.get("calculateFreq"))
         self.calculateThread.signal_updateUI.connect(self.start_calculate_action)
+        self.conn = WirelessConnexion(self.basicRadarConfig)
 
     def init_ui(self):
         logging.info("Initializing Main ui...")
@@ -217,13 +220,14 @@ class MainFrame(QtWidgets.QWidget):
         self.statePanel.addWidget(self.counterLabel)
 
         self.priorCounterStrLable = QtWidgets.QLabel(strs.strings.get("priorCounter")[appconfig.language] + ": ")
-        self.priorCounterLable =  QtWidgets.QLabel()
+        self.priorCounterLable = QtWidgets.QLabel()
         self.priorCounterLable.setFont(QtGui.QFont("Times", pointSize=20, weight=QtGui.QFont.Bold))
         self.statePanel.addWidget(self.priorCounterStrLable)
         self.statePanel.addWidget(self.priorCounterLable)
 
-        self.unregisteredCounterStrLable = QtWidgets.QLabel(strs.strings.get("unregisteredCounter")[appconfig.language] + ": ")
-        self.unregisteredCounterLabel =  QtWidgets.QLabel()
+        self.unregisteredCounterStrLable = QtWidgets.QLabel(
+            strs.strings.get("unregisteredCounter")[appconfig.language] + ": ")
+        self.unregisteredCounterLabel = QtWidgets.QLabel()
         self.unregisteredCounterLabel.setFont(QtGui.QFont("Times", pointSize=20, weight=QtGui.QFont.Bold))
         self.statePanel.addWidget(self.unregisteredCounterStrLable)
         self.statePanel.addWidget(self.unregisteredCounterLabel)
@@ -232,7 +236,6 @@ class MainFrame(QtWidgets.QWidget):
         self.counterTimer = QtCore.QTimer(self)
         self.counterTimer.timeout.connect(self.counter_data)
         self.counterTimer.start(self.basicRadarConfig.get("receiveFreq") * 100)
-
 
     def counter_data(self):
         """
@@ -251,7 +254,6 @@ class MainFrame(QtWidgets.QWidget):
         self.sysConfigBtn.setEnabled(False)
         self.sysConfigBtn.setToolTip("Not implemented.")
 
-
     def init_connexion(self):
         """
             Initializing Connexions
@@ -259,7 +261,6 @@ class MainFrame(QtWidgets.QWidget):
             If program is success to connect radar, the radar wireless connectors will send a start instruction to radar
             If use GPS check box is checked, the program will try to connect GPS with configurations.
         """
-        self.conn = WirelessConnexion(self.basicRadarConfig)
         if self.conn.connect() == errorhandle.CONNECT_ERROR:
             QMessageBoxSample.showDialog(self, "Error occur! check logs...", appconfig.ERROR)
             return errorhandle.CONNECT_ERROR
@@ -346,7 +347,6 @@ class MainFrame(QtWidgets.QWidget):
 
         # Start find way to home Algo
         self.calculateThread.start()
-
 
     def start_calculate_action(self):
         """
@@ -449,6 +449,7 @@ class MainFrame(QtWidgets.QWidget):
                     return
 
             plots = toolsradarcas.byte2signedInt(bytesData)
+            logging.info("Plots length: " + str(len(plots)))
             cleanPlots = toolsradarcas.cleanRealTimeData(plots)
             reversePlots = np.expand_dims(np.asarray(cleanPlots).T, axis=1)
             if self.findWayToHome.radarNPData.shape == (1, 1):
@@ -481,8 +482,6 @@ class MainFrame(QtWidgets.QWidget):
         self.counter += 1
         QApplication.processEvents()
 
-
-
     def start_gps_collection_action(self):
         """
             GPS collector aims to receive GPS serial data,  for each data send back, it will be parsed to GGA/GNS(GPS/beidou)
@@ -506,7 +505,6 @@ class MainFrame(QtWidgets.QWidget):
                 singleGPSCleanData = self.mockGPSData[self.gpsCounter]
                 self.findWayToHome.gpsData.append(singleGPSCleanData)
                 self.gpsCounter += 1
-
 
     def stop_collection_action(self):
         """
@@ -544,7 +542,6 @@ class MainFrame(QtWidgets.QWidget):
         # self.counter = 0
         self.isCollecting = False
 
-
     def gps_config_action(self):
         self.gpsconfView = GPSConfigurationDialog()
         if self.gpsconfView.exec_():
@@ -554,23 +551,28 @@ class MainFrame(QtWidgets.QWidget):
             logging.info("GPS settings has no change.")
 
     def radar_config_action(self):
-        radarconfView = RadarConfigurationDialog(self.basicRadarConfig)
-        if radarconfView.exec_():
-            res = radarconfView.get_data()
-            self.basicRadarConfig["bytesNum"] = int(int(res.get("sampleNum")) * 2)
-            self.basicRadarConfig["patchSize"] = res.get("patchSize")
-            self.basicRadarConfig["deltaDist"] = res.get("deltaDist")
-            self.basicRadarConfig["priorMapInterval"] = res.get("priorMapInterval")
-            self.basicRadarConfig["firstCutRow"] = res.get("firstCutRow")
-            # self.findWayToHome.samplePoints = int(res.get("sampleNum"))
-            # self.findWayToHome.patchSize = res.get("patchSize")
-            # self.findWayToHome.priorMapInterval = res.get("priorMapInterval")
-            # self.findWayToHome.unregisteredMapInterval = res.get("unregisteredMapInterval")
-            # self.findWayToHome.firstCutRow = res.get("firstCutRow")
-            self.findWayToHome.load_config(res)
-            logging.info("radar settings is updated to: " + str(res))
+        # TODO: Test connexion with radar
+        if self.conn.connect() != 0:
+            QMessageBoxSample.showDialog(self, "Connect to radar failed!", appconfig.ERROR)
         else:
-            logging.info("radar settings has no change.")
+            radarconfView = RadarConfigurationDialog(self.basicRadarConfig)
+            if radarconfView.exec_():
+                res = radarconfView.get_data()
+                self.basicRadarConfig["bytesNum"] = int(int(res.get("sampleNum")) * 2)
+                self.basicRadarConfig["patchSize"] = res.get("patchSize")
+                self.basicRadarConfig["deltaDist"] = res.get("deltaDist")
+                self.basicRadarConfig["priorMapInterval"] = res.get("priorMapInterval")
+                self.basicRadarConfig["firstCutRow"] = res.get("firstCutRow")
+                self.findWayToHome.load_config(res)
+                instruments = res.get("instruments")
+                sendRes = self.conn.send(instruments)
+                if sendRes != 0:
+                    QMessageBoxSample.showDialog(self,
+                                                 "Send configurations failed, ERROR CODE: " + str(sendRes),
+                                                 appconfig.ERROR)
+                logging.info("radar settings is updated to: " + str(res))
+            else:
+                logging.info("radar settings has no change.")
 
     def measwheel_config_action(self):
         measwheelconf = MeasurementWheelConfigurationDialog()
@@ -623,7 +625,6 @@ class MainFrame(QtWidgets.QWidget):
         """
         pass
 
-
     def load_origin_data(self):
         """
         Just for debug unregistered measurement
@@ -638,8 +639,9 @@ class MainFrame(QtWidgets.QWidget):
             self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
         self.radarNPData = np.zeros((1, 1))
         self.windows = []
-        self.findWayToHome.files = [1 ,2 ,3]
-        self.findWayToHome.firstDBIndexes = [index for index in np.arange(415, self.findWayToHome.radarNPData.shape[1], 5)]
+        self.findWayToHome.files = [1, 2, 3]
+        self.findWayToHome.firstDBIndexes = [index for index in
+                                             np.arange(415, self.findWayToHome.radarNPData.shape[1], 5)]
         logging.info(self.findWayToHome.firstDBIndexes)
         self.priorCounterLable.setText(str(self.findWayToHome.radarNPData.shape[1]))
 
