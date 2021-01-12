@@ -8,6 +8,7 @@ from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QGridLayout, QFormLayout
 
 import appconfig
+import toolsradarcas
 import value.strings as strs
 from configuration import ConfigurationDialog
 from dialogmsgbox import QMessageBoxSample
@@ -36,19 +37,27 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.sampleNum.setObjectName("sampleNum")
         self.sampleNumCombox = QtWidgets.QComboBox(self)
         self.sampleNumCombox.setObjectName("sampleNumCombox")
-        self.sampleNumCombox.setItemText(0, str(int(self.defaultConf.get("bytesNum") / 2)))
-        self.sampleNumCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("sampleNum"))))
-
+        currSampleNum = str(int(self.defaultConf.get("bytesNum") / 2))
+        self.sampleNumCombox.addItem(currSampleNum)
+        sampleNumList = strs.combobox.get("sampleNum").copy()
+        sampleNumList.remove(currSampleNum)
+        self.sampleNumCombox.addItems(self.translate_combox(self.checkList(sampleNumList)))
 
         self.sampleFreq = QtWidgets.QLabel(strs.strings.get("sampleFreq")[appconfig.language])
         self.sampleFreq.setObjectName("sampleFreq")
         self.sampleFreqCombox = QtWidgets.QComboBox(self)
         self.sampleFreqCombox.setObjectName("sampleFreqCombox")
-        self.sampleFreqCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("sampleFreq"))))
+        currSampleFreq = str(self.defaultConf.get("sampleFreq")) + "GHz"
+        self.sampleFreqCombox.addItem(currSampleFreq)
+        sampleFreqList = strs.combobox.get("sampleFreq").copy()
+        sampleFreqList.remove(currSampleFreq)
+        self.sampleFreqCombox.addItems(self.translate_combox(self.checkList(sampleFreqList)))
 
         self.patchSize = QtWidgets.QLabel(strs.strings.get("patchSize")[appconfig.language])
         self.patchSize.setObjectName("patchSize")
         self.patchSizeEdit = QtWidgets.QLineEdit()
+        self.patchSizeEdit.setToolTip("The sum of patch size and first cut row must be less than "
+                                      + self.sampleNumCombox.currentText())
         self.patchSizeEdit.setObjectName("firstCutNumEdit")
         self.patchSizeEdit.setText(str(self.defaultConf.get("patchSize")))
         self.patchSizeEdit.setValidator(QIntValidator(0, 5000))
@@ -62,6 +71,7 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.firstCutRow = QtWidgets.QLabel(strs.strings.get("firstCutRow")[appconfig.language])
         self.firstCutRow.setObjectName("firstCutRow")
         self.firstCutRowEdit = QtWidgets.QLineEdit()
+        self.firstCutRowEdit.setToolTip("Must be greater than 4!")
         self.firstCutRowEdit.setObjectName("firstCutRowEdit")
         self.firstCutRowEdit.setText(str(self.defaultConf.get("firstCutRow")))
         self.firstCutRowEdit.setValidator(QIntValidator(0, 1000))
@@ -105,44 +115,31 @@ class RadarConfigurationDialog(ConfigurationDialog):
 
         self.setLayout(self.mainGrid)
 
-
     def get_data(self):
-        # if not self.deltaDistEdit.text() or not self.patchSizeEdit.text():
-        #     QMessageBoxSample.showDialog(self, "Empty blank found!!", appconfig.ERROR)
-        #     return
+        patchSize = self.patchSizeEdit.text()
+        deltaDist = self.deltaDistEdit.text()
+        firstCutRow = self.firstCutRowEdit.text()
+        priorMapInterval = self.priorMapIntervalEdit.text()
+        unregisteredInterval = self.unregisteredMapIntervalEdit.text()
+
         try:
-            float(self.deltaDistEdit.text())
+            float(deltaDist)
         except:
             QMessageBoxSample.showDialog(self, "Delta Dist. Value Error!!", appconfig.ERROR)
-            self.deltaDistEdit.setText("")
-            return
-        try:
-            int(self.patchSizeEdit.text())
-        except:
-            self.patchSizeEdit.setText("")
-            QMessageBoxSample.showDialog(self, "Patch Size Value Error!!", appconfig.ERROR)
+            self.deltaDistEdit.setText(str(self.defaultConf.get("patchSize")))
             return
 
-        try:
-            int(self.firstCutRowEdit.text())
-        except:
-            self.firstCutRowEdit.setText("")
-            QMessageBoxSample.showDialog(self, "first Cut Row Value Error!!", appconfig.ERROR)
-            return
-
-        try:
-            int(self.priorMapIntervalEdit.text())
-        except:
-            self.priorMapIntervalEdit.setText("")
-            QMessageBoxSample.showDialog(self, "Prior map interval Value Error!!", appconfig.ERROR)
-            return
-
-        try:
-            int(self.unregisteredMapIntervalEdit.text())
-        except:
-            self.unregisteredMapIntervalEdit.setText("")
-            QMessageBoxSample.showDialog(self, "Unregistered map interval Value Error!!", appconfig.ERROR)
-            return
+        if patchSize.isnumeric() and firstCutRow.isnumeric() and priorMapInterval.isnumeric() \
+            and unregisteredInterval.isnumeric():
+            patchSize = int(self.patchSizeEdit.text())
+            firstCutRow = int(self.firstCutRowEdit.text())
+            if int(self.sampleNumCombox.currentText()) - patchSize - firstCutRow < 0:
+                QMessageBoxSample.showDialog(self,
+                "Patch size + first cut row can not less than sample number!", appconfig.ERROR)
+                # self.patchSizeEdit.setText(str(self.defaultConf.get("patchSize")))
+                return
+            if firstCutRow < 4:
+                QMessageBoxSample.showDialog(self, "FirstCutRow show be greater than 4!", appconfig.ERROR)
 
         radarSettings = {
             "bytesNum": int(int(self.sampleNumCombox.currentText()) * 2),
@@ -165,21 +162,25 @@ class RadarConfigurationDialog(ConfigurationDialog):
 
 
 def build_instruments(radarConfig, measWheel={}):
-    bytesNum = int(radarConfig.get("bytesNum") / 256)
+    import math
+    bytesNum = int(math.log(radarConfig.get("bytesNum"))/math.log(2) - 7)
     sampleRate = int(radarConfig.get("sampleFreq") / 5.25)
+    if sampleRate == 4:
+        sampleRate = 3
+    elif sampleRate == 8:
+        sampleRate = 4
     instruments = appconfig.basic_instruct_config().get("bytesNum")
     instruments.append(bytesNum)
     instruments.append(appconfig.basic_instruct_config().get("sampleFreq")[0])
     instruments.append(sampleRate)
     return instruments
 
-
-
-
+# inst = build_instruments(appconfig.basic_radar_config())
+# print(toolsradarcas.hexInstruction2Byte(inst))
 # if __name__ == "__main__":
 #     import sys
 #     app = QtWidgets.QApplication(sys.argv)
-#     v = RadarConfigurationDialog()
+#     v = RadarConfigurationDialog(appconfig.basic_radar_config())
 #     if v.exec_():
 #         res = v.get_data()
 #         print(res)
