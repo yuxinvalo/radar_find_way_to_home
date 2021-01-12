@@ -98,7 +98,7 @@ combobox = {
     "radarType": ['type1', 'type2'],
     "permittivity": ['4.1 glass', '5.8', '8.0'],
     "sampleNum": ['512', '256', '1024', '2048'],
-    "sampleFreq": ['8GHz', '24GHz'],
+    "sampleFreq": ['10.5GHz', '5.25GHz', '21GHz'],
     "gainMode": ['constGain', 'others'],
     "accumTime": ['1', '2', '3', '4'],
     "measureAccuracy": ['1cm', '2cm', '3cm'],

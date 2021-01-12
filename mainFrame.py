@@ -315,6 +315,10 @@ class MainFrame(QtWidgets.QWidget):
         if self.realTime:
             if self.init_connexion() != 0:
                 return
+            if not self.useGPSCheckBox.isChecked():
+                self.mockGPSData = Tools.GPRGPSReader(Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_4.GPR'))).T
+                logging.info("Mock GPS DATA Length: " + str(len(self.mockGPSData)))
+                self.gpsCounter = 0
         else:  # Mock Real Time Data In
             self.gpsCounter = 0
             # MOCK by pickle file ==================================
@@ -339,14 +343,15 @@ class MainFrame(QtWidgets.QWidget):
         self.collectRadarThread.start()
         if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected and self.measTimes == 1:
             self.collectGPSThread.start()
+        if self.realTime and not self.basicRadarConfig.get("useGPS") and self.measTimes == 1:
+            self.collectGPSThread.start()
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(True)
         self.radarConfigBtn.setEnabled(False)
         self.gpsConfigBtn.setEnabled(False)
 
-        # Start find way to home Algo
+        # Start find way to home Algo==========================
         self.calculateThread.start()
-
 
     def start_calculate_action(self):
         """
@@ -489,7 +494,7 @@ class MainFrame(QtWidgets.QWidget):
             format and retrieves latitude, longitude and altitude as a list and save in memory.
         """
         # logging.info("Start GPS collection...GPS Data length:" + str(len(self.findWayToHome.gpsData)))
-        if self.realTime:
+        if self.realTime and self.useGPSCheckBox.isChecked():
             # Rec GPS Data
             if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected:
                 gga, rawGPSData = self.gpsconfView.gpsConn.recv(1)
@@ -530,9 +535,7 @@ class MainFrame(QtWidgets.QWidget):
             self.collectGPSThread.stop()
             self.collectGPSThread.isexit = False
 
-        if not self.realTime:
-            self.gpsCounter = 0
-
+        self.gpsCounter = 0
         if self.measTimes == 1:
             self.priorCounterLable.setText(str(self.counter))
         else:
@@ -614,8 +617,14 @@ class MainFrame(QtWidgets.QWidget):
     def use_mock_data(self):
         if self.useMockCheckBox.isChecked():
             self.realTime = False
+            self.findWayToHome.init_vars()
+            self.priorCounterLable.setText("0")
+            self.unregisteredCounterLabel.setText("0")
         else:
             self.realTime = True
+            self.findWayToHome.init_vars()
+            self.priorCounterLable.setText("0")
+            self.unregisteredCounterLabel.setText("0")
 
     def closeEvent(self, a0: QtGui.QCloseEvent):
         """

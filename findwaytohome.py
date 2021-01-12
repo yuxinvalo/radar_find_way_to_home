@@ -40,13 +40,17 @@ class FindWayToHome(object):
     """
     def __init__(self, patchSize, samplePoints, firstCutRow, priorMapInterval, unregisteredMapInterval, deltaDist):
         super(FindWayToHome, self).__init__()
-        self.init_tf()
+        # self.init_tf()
         self.samplePoints = samplePoints
         self.patchSize = patchSize  # 第一次测量时选择的切片道数 默认416， 可在雷达设置里改
         self.firstCutRow = firstCutRow
         self.priorMapInterval = priorMapInterval
         self.unregisteredMapInterval = unregisteredMapInterval
         self.deltaDist = deltaDist
+
+        self.init_vars()
+
+    def init_vars(self):
         # self.radarData = []
         self.radarNPData = np.zeros((1, 1))  # This will be a numpy format variable
         self.gpsData = []
@@ -118,15 +122,13 @@ class FindWayToHome(object):
             singleWindowRadarData = RemoveBackground(singleWindowRadarData)
             singleWindowRadarData = LinearGain(singleWindowRadarData, end_gain_in_dB=endGaindB)
 
-        # if moveMode == ALLER_RETOUR:
-        #     singleWindowRadarData = np.fliplr(singleWindowRadarData)
+        if moveMode == ALLER_RETOUR:
+            singleWindowRadarData = np.fliplr(singleWindowRadarData)
 
         # 读取每道数据对应的GPS信息并处理
         # Mocks Data:
         if numWindow == 0:
             windowsGPSXYZMatrix = np.array(self.gpsData[headIndex:headIndex + self.patchSize]).T
-            # print("single GPS window shape: ", end=" ")
-            # print(windowsGPSXYZMatrix.shape)
             windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
             if moveMode == ALLER_RETOUR:
                 windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
@@ -147,15 +149,15 @@ class FindWayToHome(object):
         self.firstDBIndexes.append(numWindow * self.priorMapInterval + self.patchSize - 1)
         image = priorMap[0, :, :]
 
-        # TF handling
-        feat_ = pool_feats(self.frcnn.extract_feature(image))
-        feat_ = np.expand_dims(feat_, axis=0)
-
-        if numWindow == 0:
-            self.priorFeats = feat_
-        else:
-            self.priorFeats = np.append(self.priorFeats, feat_, axis=0)
-            print("FIRST====NP add new feat: " + str(self.priorFeats.shape))
+        # TF handling==========================================================
+        # feat_ = pool_feats(self.frcnn.extract_feature(image))
+        # feat_ = np.expand_dims(feat_, axis=0)
+        #
+        # if numWindow == 0:
+        #     self.priorFeats = feat_
+        # else:
+        #     self.priorFeats = np.append(self.priorFeats, feat_, axis=0)
+        #     print("FIRST====NP add new feat: " + str(self.priorFeats.shape))
 
     def fill_GPS_data(self):
         """
@@ -192,24 +194,21 @@ class FindWayToHome(object):
         """
         if times == 1:
             self.files.append(toolsradarcas.saveData(self.radarNPData, format='pickle', times=1))
-            # self.files.append(toolsradarcas.saveData(self.radarData, format='pickle', instType='raw', times=1))
             self.files.append(toolsradarcas.saveData(self.gpsNPData, format='pickle', instType='gps', times=1))
-            self.files.append(toolsradarcas.saveData(self.priorFeats, format='pickle', instType='feats', times=1))
+            # self.files.append(toolsradarcas.saveData(self.priorFeats, format='pickle', instType='feats', times=1))
             self.files.append(toolsradarcas.saveData(self.windows, format='pickle', instType='windows', times=1))
 
             # Prepare for second measurement
-            # self.radarData = []
-            for i in range(self.priorFeats.shape[0]):
-                self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
+            # for i in range(self.priorFeats.shape[0]):
+            #     self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
             self.radarNPData = np.zeros((1, 1))
             self.windows = []
         else:
             self.files.append(toolsradarcas.saveData(self.radarNPData, format='pickle', times=2))
-            self.files.append(
-                toolsradarcas.saveData(self.unregisteredFeats, format='pickle', instType='feats', times=2))
+            # self.files.append(
+            #     toolsradarcas.saveData(self.unregisteredFeats, format='pickle', instType='feats', times=2))
             self.files.append(toolsradarcas.saveData(self.windows, format='pickle', instType='windows', times=2))
-            self.sythetic_feats()
-        # self.frcnn.close_session()
+            # self.sythetic_feats()
 
     def unregistered_find_way(self, numWindow, isClean=True, endGaindB=18):
         """
@@ -243,31 +242,32 @@ class FindWayToHome(object):
 
         image = unregisteredMap[0, :, :]
 
-        feat_ = pool_feats(self.frcnn.extract_feature(image))
-        feat_ = normalize(feat_, axis=1)
-        feat_ = np.expand_dims(feat_, axis=0)
-
-        if numWindow == 0:
-            self.unregisteredFeats = feat_
-        else:
-            self.unregisteredFeats = np.append(self.unregisteredFeats, feat_, axis=0)
-            print("SECOND====NP add new feat: " + str(self.unregisteredFeats.shape))
-
-        self.waitToMatch = []
-        for append_ii in range(self.append_num):  # 如果当前位置不好确定 则需要联合之前的数据
-            assert self.append_num >= 1
-            if numWindow - append_ii >= 0:
-                self.waitToMatch.append(self.unregisteredFeats[numWindow - append_ii, :, :])
-
-        # Search feat from prior databases
-        matchIndex, minMAD = Search(np.array(self.waitToMatch), self.priorFeats, self.interval)
-        print("Find match Index, minMAD: " + str(matchIndex) + " | " + str(minMAD))
-
-        locate_GPS = MapIndex2GPS(self.firstDBIndexes[matchIndex],
-                                  self.gpsNPData)
-        self.GPStrack.append(locate_GPS)
-        self.unregisteredMapPos.append(self.secondDBIndexes[numWindow])
-        self.priorMapPos.append(self.firstDBIndexes[matchIndex])
+        # Handling Feat=================================================================
+        # feat_ = pool_feats(self.frcnn.extract_feature(image))
+        # feat_ = normalize(feat_, axis=1)
+        # feat_ = np.expand_dims(feat_, axis=0)
+        #
+        # if numWindow == 0:
+        #     self.unregisteredFeats = feat_
+        # else:
+        #     self.unregisteredFeats = np.append(self.unregisteredFeats, feat_, axis=0)
+        #     print("SECOND====NP add new feat: " + str(self.unregisteredFeats.shape))
+        #
+        # self.waitToMatch = []
+        # for append_ii in range(self.append_num):  # 如果当前位置不好确定 则需要联合之前的数据
+        #     assert self.append_num >= 1
+        #     if numWindow - append_ii >= 0:
+        #         self.waitToMatch.append(self.unregisteredFeats[numWindow - append_ii, :, :])
+        #
+        # # Search feat from prior databases
+        # matchIndex, minMAD = Search(np.array(self.waitToMatch), self.priorFeats, self.interval)
+        # print("Find match Index, minMAD: " + str(matchIndex) + " | " + str(minMAD))
+        #
+        # locate_GPS = MapIndex2GPS(self.firstDBIndexes[matchIndex],
+        #                           self.gpsNPData)
+        # self.GPStrack.append(locate_GPS)
+        # self.unregisteredMapPos.append(self.secondDBIndexes[numWindow])
+        # self.priorMapPos.append(self.firstDBIndexes[matchIndex])
 
     def sythetic_feats(self):
         """

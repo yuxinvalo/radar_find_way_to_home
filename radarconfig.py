@@ -36,8 +36,9 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.sampleNum.setObjectName("sampleNum")
         self.sampleNumCombox = QtWidgets.QComboBox(self)
         self.sampleNumCombox.setObjectName("sampleNumCombox")
-        self.sampleNumCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("sampleNum"))))
         self.sampleNumCombox.setItemText(0, str(int(self.defaultConf.get("bytesNum") / 2)))
+        self.sampleNumCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("sampleNum"))))
+
 
         self.sampleFreq = QtWidgets.QLabel(strs.strings.get("sampleFreq")[appconfig.language])
         self.sampleFreq.setObjectName("sampleFreq")
@@ -144,8 +145,9 @@ class RadarConfigurationDialog(ConfigurationDialog):
             return
 
         radarSettings = {
-            "sampleNum": self.sampleNumCombox.currentText(),
-            "sampleFreq": self.sampleFreqCombox.currentText(),
+            "bytesNum": int(int(self.sampleNumCombox.currentText()) * 2),
+            "sampleNum": int(self.sampleNumCombox.currentText()),
+            "sampleFreq": float(self.sampleFreqCombox.currentText()[0:-3]),
             "patchSize": int(self.patchSizeEdit.text()),
             "deltaDist": float(self.deltaDistEdit.text()),
             "firstCutRow": int(self.firstCutRowEdit.text()),
@@ -160,6 +162,18 @@ class RadarConfigurationDialog(ConfigurationDialog):
 
     def load_config(self):
         pass
+
+
+def build_instruments(radarConfig, measWheel={}):
+    bytesNum = int(radarConfig.get("bytesNum") / 256)
+    sampleRate = int(radarConfig.get("sampleFreq") / 5.25)
+    instruments = appconfig.basic_instruct_config().get("bytesNum")
+    instruments.append(bytesNum)
+    instruments.append(appconfig.basic_instruct_config().get("sampleFreq")[0])
+    instruments.append(sampleRate)
+    return instruments
+
+
 
 
 # if __name__ == "__main__":

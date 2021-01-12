@@ -33,7 +33,7 @@ def basic_radar_config():
         "readTimeOut": 5,
         "writeTimeOut": 3,
         "maxConnTry": 2,
-        "bytesNum": 2048,
+        "bytesNum": 1024,
         "bscanRefreshInterval": 1000,  # Refresh view per 100 line data
         "receiveFreq": 0.1,  # Unit: second
         "calculateFreq": 0.5,
@@ -63,7 +63,8 @@ def basic_instruct_config():
     instructions = {
         "start": [0x00, 0xFF],
         "stop": [0x00, 0x00],
-        "bytesNum": [0x0A],
+        "bytesNum": [0x01],
+        "sampleFreq": [0x02],
         "precise": [0x0B],
     }
     return instructions
