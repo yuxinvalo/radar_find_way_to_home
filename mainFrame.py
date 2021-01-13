@@ -54,10 +54,12 @@ class MainFrame(QtWidgets.QWidget):
     """
     def __init__(self):
         super(MainFrame, self).__init__()
-        # Config
+        # Load Config
         appconfig.basic_log_config()
         self.basicRadarConfig = appconfig.basic_radar_config()
         self.basicGPSConfig = appconfig.basic_gps_config()
+        self.basicMeasWheelConfig = appconfig.basic_meas_wheel_config()
+        self.measWheelParams = toolsradarcas.calculate_dist_per_line(self.basicMeasWheelConfig)
         self.findWayToHome = FindWayToHome(self.basicRadarConfig.get("patchSize"), \
                                            int(self.basicRadarConfig.get("bytesNum") / 2), \
                                            int(self.basicRadarConfig.get("firstCutRow")), \
@@ -263,7 +265,7 @@ class MainFrame(QtWidgets.QWidget):
             if self.conn.reconnect() == errorhandle.CONNECT_ERROR:
                 QMessageBoxSample.showDialog(self, "Error occur! check logs...", appconfig.ERROR)
                 return errorhandle.CONNECT_ERROR
-        instructStart = toolsradarcas.hexInstruction2Byte(appconfig.basic_instruct_config().get("start"))
+        instructStart = toolsradarcas.hex_Instruction_2_bytes(appconfig.basic_instruct_config().get("start"))
         sendRes = self.conn.send(instructStart)
         if sendRes != 0:
             QMessageBoxSample.showDialog(self, "Error occur! check logs...", appconfig.ERROR)
@@ -455,11 +457,10 @@ class MainFrame(QtWidgets.QWidget):
             if bytesData == errorhandle.RECV_DATA_ERROR or bytesData == errorhandle.DISCONNECT_ERROR:
                 if self.conn.reconnect() == errorhandle.RECV_DATA_ERROR:
                     self.stop_collection_action()
-                    # QMessageBoxSample.showDialog(self, "Error occur! check logs..." + int(aTuple), appconfig.ERROR)
                     return
 
-            plots = toolsradarcas.byte2signedInt(bytesData)
-            cleanPlots = toolsradarcas.cleanRealTimeData(plots)
+            plots = toolsradarcas.byte_2_signedInt(bytesData)
+            cleanPlots = toolsradarcas.clean_realtime_data(plots)
             reversePlots = np.expand_dims(np.asarray(plots).T, axis=1)
             # print(len(plots))
             # print(plots)
@@ -531,7 +532,7 @@ class MainFrame(QtWidgets.QWidget):
             if not self.conn or not self.conn.connected:
                 QMessageBoxSample.showDialog(self, "Connexion is already down!", appconfig.WARNING)
             else:
-                stopInstruct = toolsradarcas.hexInstruction2Byte(appconfig.basic_instruct_config().get("stop"))
+                stopInstruct = toolsradarcas.hex_Instruction_2_bytes(appconfig.basic_instruct_config().get("stop"))
                 if self.conn.send(stopInstruct) != 0:
                     QMessageBoxSample.showDialog(self, "Error occur! check logs...", appconfig.ERROR)
                 self.conn.disconnect()
@@ -556,7 +557,7 @@ class MainFrame(QtWidgets.QWidget):
 
 
     def gps_config_action(self):
-        self.gpsconfView = GPSConfigurationDialog()
+        self.gpsconfView = GPSConfigurationDialog(self.basicGPSConfig)
         if self.gpsconfView.exec_():
             self.basicGPSConfig = self.gpsconfView.get_data()
             logging.info("GPS settings is updated to: " + str(self.basicGPSConfig))
@@ -568,20 +569,20 @@ class MainFrame(QtWidgets.QWidget):
         if radarconfView.exec_():
             res = radarconfView.get_data()
             if res:
+                instruments = toolsradarcas.hex_Instruction_2_bytes(build_instruments(res, self.measWheelParams))
                 if self.realTime:
                     if self.conn.connected:
-                        instruments = toolsradarcas.hexInstruction2Byte(build_instruments(res))
                         if self.conn.send(instruments) != 0:
                             QMessageBoxSample.showDialog(self, "Configurate Radar failed...Please retry!", appconfig.ERROR)
                             return
                     else:
                         if self.conn.connect() == 0:
-                            instruments = toolsradarcas.hexInstruction2Byte(build_instruments(res))
+                            instruments = toolsradarcas.hex_Instruction_2_bytes(build_instruments(res))
                             if self.conn.send(instruments) != 0:
                                 QMessageBoxSample.showDialog(self, "Configurate Radar failed...Please retry!",
                                                              appconfig.ERROR)
                                 return
-                        print(instruments)
+                print(instruments)
                 self.basicRadarConfig["bytesNum"] = res.get("bytesNum")
                 self.basicRadarConfig["sampleFreq"] = res.get("sampleFreq")
                 self.basicRadarConfig["patchSize"] = res.get("patchSize")
@@ -598,10 +599,15 @@ class MainFrame(QtWidgets.QWidget):
             logging.info("radar settings has no change.")
 
     def measwheel_config_action(self):
-        measwheelconf = MeasurementWheelConfigurationDialog()
+        measwheelconf = MeasurementWheelConfigurationDialog(self.basicMeasWheelConfig)
         if measwheelconf.exec_():
             res = measwheelconf.get_data()
-            logging.info("measurement wheel settings is updated to: " + str(res))
+            if res:
+                self.basicMeasWheelConfig = res
+                self.measWheelParams = toolsradarcas.calculate_dist_per_line(self.basicMeasWheelConfig)
+                logging.info("measurement wheel settings is updated to: " + str(res))
+            else:
+                logging.error("Measurement wheel settings failed...")
         else:
             logging.info("measurement wheel settings has no change.")
 

@@ -161,21 +161,28 @@ class RadarConfigurationDialog(ConfigurationDialog):
         pass
 
 
-def build_instruments(radarConfig, measWheel={}):
+def build_instruments(radarConfig, measWheelParams):
     import math
     bytesNum = int(math.log(radarConfig.get("bytesNum"))/math.log(2) - 9)
-    sampleRate = int(radarConfig.get("sampleFreq") / 5.25)
+    sampleRate = int(radarConfig.get("sampleFreq") / 5.25) - 1
     if sampleRate == 4:
-        sampleRate = 3
+        sampleRate = 2
     elif sampleRate == 8:
-        sampleRate = 4
+        sampleRate = 3
     instruments = appconfig.basic_instruct_config().get("bytesNum")
     instruments.append(bytesNum)
     instruments.append(appconfig.basic_instruct_config().get("sampleFreq")[0])
     instruments.append(sampleRate)
+
+    # Measurement Wheel
+    colMode = radarConfig.get("collectionMode")
+    if colMode in strs.strings.get("discontiMeas"):
+        pulsePerCM = int(measWheelParams[appconfig.PULSE_PER_CM])
+        instruments.append(appconfig.basic_instruct_config().get("precise")[0])
+        instruments.append(pulsePerCM)
     return instruments
 
-# inst = build_instruments(appconfig.basic_radar_config())
+# inst = build_instruments(appconfig.basic_radar_config(), [0.0872, 11.4678, 0.9592])
 # print(toolsradarcas.hexInstruction2Byte(inst))
 # if __name__ == "__main__":
 #     import sys

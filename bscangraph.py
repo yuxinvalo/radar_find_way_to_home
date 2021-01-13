@@ -12,13 +12,8 @@ class BscanGraph(FigureCanvas):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
 
         self.axes = self.fig.add_subplot(111)
-
-        # dataBytes = tools.loadFile("2021-01-02-16-39-15-radar.pkl")
-        # dataBytes = tools.loadFile("radarMocks512.pkl")
-        # data = tools.list2numpy(dataBytes)
-        # print(data.shape)
         data = np.zeros(shape=[1000, samplePoint])
-        self.im = self.axes.imshow(data.T, cmap=plt.cm.gray, aspect=1,
+        self.im = self.axes.imshow(data.T, cmap=plt.cm.gray, aspect='auto',
                                    vmax=32786, vmin=-32786)
         self.axes.autoscale(True, axis='both', tight=True)
         FigureCanvas.__init__(self, self.fig)
@@ -30,10 +25,7 @@ class BscanGraph(FigureCanvas):
         FigureCanvas.updateGeometry(self)
 
     def plot_bscan(self, refreshData):
-        # data = tools.list2numpy(lineDataByte)
-        # lineDataList = [refreshData]
         lineDataNP = np.asarray(refreshData)
-        # print(lineDataNP)
         self.im.set_data(lineDataNP.T)
         self.fig.canvas.draw_idle()
 

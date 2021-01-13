@@ -9,19 +9,26 @@ import errorhandle
 from value import respath
 
 
-def byte2signedInt(bdata):
+def byte_2_signedInt(bdata):
     count = len(bdata) / 2
     integers = struct.unpack('h' * int(count), bdata)
     return integers
 
 
-def hexInstruction2Byte(instruction):
+def hex_Instruction_2_bytes(instruction):
     return struct.pack("%dB" % (len(instruction)), *instruction)
 
 
 # Del title info like 29268, 29268, 4095, 2296
-def cleanRealTimeData(aTuple):
+def clean_realtime_data(aTuple):
     return aTuple[4: -1]
+
+
+def calculate_dist_per_line(measWheelConfig):
+    distPerPulse = round((measWheelConfig.get("measWheelDiameter") / measWheelConfig.get("pulseCountPerRound")), 4)
+    pulsePerCM = round(1 / distPerPulse, 4)
+    distPerLine = round(distPerPulse * pulsePerCM)
+    return distPerPulse, pulsePerCM, distPerLine
 
 
 @DeprecationWarning
@@ -33,18 +40,18 @@ def saveDataNumpy(data, filepath, instType='radar'):
     np.save(filepath, data)
 
 
-def saveData(data, filepath='', format='pickle', instType='radar', times=0):
+def save_data(data, filepath='', format='pickle', instType='radar', times=0):
     if format == 'pickle':
-        return saveDataPickle(data, filepath, instType, times)
+        return save_data_pickle(data, filepath, instType, times)
     elif format == 'numpy':
         saveDataNumpy(data, filepath)
     elif format == 'GPR':
-        return saveDataGPR(data, filepath)
+        return save_data_GPR(data, filepath)
     else:
         return errorhandle.UNKNOW_FILE_FORMAT
 
 
-def saveDataGPR(data, filepath=''):
+def save_data_GPR(data, filepath=''):
     try:
         filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()) + '.GBR'
         if not filepath:
@@ -59,7 +66,7 @@ def saveDataGPR(data, filepath=''):
     return f.name
 
 
-def saveDataPickle(data, filepath='', instType='radar', times=0):
+def save_data_pickle(data, filepath='', instType='radar', times=0):
     import pickle
     if times != 0:
         filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()) + '_' + instType + str(times) + '.pkl'
@@ -111,7 +118,7 @@ def list2numpy(data, dataType='byte'):
     if dataType == 'byte':
         dataTrans = []
         for ele in data:
-            dataTrans.append(byte2signedInt(ele))
+            dataTrans.append(byte_2_signedInt(ele))
         arr = np.asarray(dataTrans)
     else:
         arr = np.asarray(data)
@@ -148,22 +155,3 @@ def bin2mat_transform2(bin_file, shape_h=1024, order='F'):
     # data = np.fliplr(data[:, -18000:-1])
     data = data[:, -18000:-1]
     return data.T
-
-# data = loadFile("2020_12_30_19_44_24.pkl")
-# print(type(data))
-# print(type(data[0]))
-# dataint = byte2signedInt(data[0])
-# print(type(dataint))
-# print(type(dataint[0]))
-# arr = list2numpy(data)
-# print(arr.shape)
-# print(type(arr))
-# print(arr)
-
-# data = loadFile("2020_12_30_19_44_24.pkl")
-# saveData(data, filepath='', format='npy')
-# data = loadFile(filename="2020_12_30_22_07_35.npy")
-# for i in data:
-#     print(len(i))
-#     print(list(i))
-#     # print(i)

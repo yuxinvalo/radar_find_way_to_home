@@ -15,6 +15,10 @@ INFO = 1
 ERROR = 2
 WARNING = 3
 
+DIST_PER_PULSE = 0
+PULSE_PER_CM = 1
+DIST_PER_LINE = 2
+
 
 def basic_log_config(debug=True):
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s"
@@ -42,9 +46,18 @@ def basic_radar_config():
         "priorMapInterval": 5,
         "unregisteredMapInterval": 400,
         "firstCutRow": 111,
-        "deltaDist": 0.0138
+        "deltaDist": 0.0138,
+        "collectionMode": '点测'
     }
     return basicRadarConfig
+
+
+def basic_meas_wheel_config():
+    basicMeasWheelConfig = {
+        "measWheelDiameter": 62.8000,
+        "pulseCountPerRound": 720,
+    }
+    return basicMeasWheelConfig
 
 
 def basic_gps_config():
@@ -54,7 +67,7 @@ def basic_gps_config():
         "baudRate": 9600,
         "parityBit": 'NONE',
         "dataBit": 8,
-        "stopBit": 1,
+        "stopBit": 1.0,
         "useGPS": False,
     }
     return basicGPSConfig
