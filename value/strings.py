@@ -64,7 +64,7 @@ strings = {
     "constGain": ['固定增益', 'Const. Gain'],
     "continMeas": ['连续测', 'Continuous Meas.'],
     "trigByCollec": ['采集触发', 'Trig. By Collection'],
-    "discontiMeas": ['间断测', 'Discontinuous Meas.'],
+    "discontiMeas": ['点测', 'Discontinuous Meas.'],
 
     # Measurement Times
     "firstTime": ['第一次测量', 'First Meas.'],
@@ -93,12 +93,12 @@ combobox = {
                  '128000', '256000'],
     "parityBit": ['NONE', 'ODD', 'EVEN', 'MARK', 'SPACE'],
     "dataBit": ['8', '5', '6', '7'],
-    "stopBit": ['1', '1.5', '2'],
+    "stopBit": ['1.0', '1.5', '2.0'],
 
     "radarType": ['type1', 'type2'],
     "permittivity": ['4.1 glass', '5.8', '8.0'],
-    "sampleNum": ['512', '256', '1024', '2048'],
-    "sampleFreq": ['10.5GHz', '5.25GHz', '21GHz'],
+    "sampleNum": ['512', '1024', '2048'],
+    "sampleFreq": ['10.5GHz', '5.25GHz', '21.0GHz'],
     "gainMode": ['constGain', 'others'],
     "accumTime": ['1', '2', '3', '4'],
     "measureAccuracy": ['1cm', '2cm', '3cm'],

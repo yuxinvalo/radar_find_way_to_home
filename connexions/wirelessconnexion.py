@@ -3,18 +3,15 @@
 # Author: syx10
 # Time 2020/12/29:12:34
 import logging
+import struct
 import time
-
-from PyQt5.QtCore import QTimer
+from socket import *
 
 import appconfig
 import errorhandle
 import toolsradarcas
 from connexions.connexion import Connexion
-import struct
-from socket import *
-
-from toolsradarcas import saveData, byte2signedInt
+from toolsradarcas import byte_2_signedInt
 
 
 class WirelessConnexion(Connexion):
@@ -117,14 +114,11 @@ class WirelessConnexion(Connexion):
 
     def reconnect(self):
         time.sleep(2)
-        self.connect()
+        return self.connect()
 
     def disconnect(self):
         self.tcpClient.close()
         self.connected = False
-
-
-
 
 
 def testConnexion():
@@ -141,7 +135,7 @@ def testConnexion():
     #         resData.append(a.recv(1024))
     while True:
         # a.recv(1024)
-        data = toolsradarcas.byte2signedInt(a.recv(1024))
+        data = toolsradarcas.byte_2_signedInt(a.recv(1024))
         print(data[0:10])
     # for i in resData:
     #     print(i)
@@ -154,8 +148,8 @@ def testConnexion():
     for i in resData:
         print(i, end='|')
         print(len(i))
-        print(byte2signedInt(i), end="|")
-        print(len(byte2signedInt(i)))
+        print(byte_2_signedInt(i), end="|")
+        print(len(byte_2_signedInt(i)))
 
 
 # testConnexion()

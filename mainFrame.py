@@ -425,6 +425,7 @@ class MainFrame(QtWidgets.QWidget):
                 self.findWayToHome.save_algo_data(2)
                 self.counter = 0
                 self.numWindow = 0
+                self.findWayToHome.init_vars()
                 # self.findWayToHome = FindWayToHome(self.basicRadarConfig)
             elif self.numWindow == 0 and self.isCollecting == False:
                 self.calculateThread.stop()

@@ -131,18 +131,18 @@ class GPSConnexion(Connexion):
         gga = ''
         for ele in gpsRealTimeData:
             for index, j in enumerate(ele):
-                if j == 36 and str(ele[index + 1:index + 6], encoding='utf-8') in ['GPGGA','GNGGA']:
+                if j == 36 and str(ele[index + 1:index + 6], encoding='utf-8') in ['GPGGA', 'GNGGA']:
                     gga = str(ele[index:-2], encoding='utf-8')
                     ggaData.append(gga)
                     continue
         return ggaData
 
-
     @staticmethod
     def check_GGA_data(gpsLineData):
         gga = ''
         for index, j in enumerate(gpsLineData):
-            if j == 36 and str(gpsLineData[index+1:index+6], encoding='utf-8', errors='ignore') in['GPGGA', 'GNGGA']:
+            if j == 36 and str(gpsLineData[index + 1:index + 6], encoding='utf-8', errors='ignore') in ['GPGGA',
+                                                                                                        'GNGGA']:
                 print(gga)
                 gga = str(gpsLineData[index:-2], encoding='utf-8')
 
