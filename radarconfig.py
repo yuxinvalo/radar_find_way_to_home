@@ -165,10 +165,12 @@ def build_instruments(radarConfig, measWheelParams):
     import math
     bytesNum = int(math.log(radarConfig.get("bytesNum"))/math.log(2) - 9)
     sampleRate = int(radarConfig.get("sampleFreq") / 5.25)
-    if sampleRate == 4:
+    if sampleRate == 8:
+        sampleRate = 0
+    elif sampleRate == 4:
+        sampleRate = 1
+    elif sampleRate == 1:
         sampleRate = 3
-    elif sampleRate == 8:
-        sampleRate = 4
     instruments = appconfig.basic_instruct_config().get("bytesNum")
     instruments.append(bytesNum)
     instruments.append(appconfig.basic_instruct_config().get("sampleFreq")[0])

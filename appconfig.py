@@ -79,6 +79,7 @@ def basic_instruct_config():
         "stop": [0x00, 0x00],
         "bytesNum": [0x01],
         "sampleFreq": [0x02],
+        "measWheel": [0x0A],
         "precise": [0x0B],
     }
     return instructions
