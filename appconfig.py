@@ -17,7 +17,7 @@ WARNING = 3
 
 
 def basic_log_config(debug=True):
-    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s"
     DATE_FORMAT = "%m/%d/%Y %H:%M:%S %p"
     if debug:
         logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT, datefmt=DATE_FORMAT)
@@ -35,7 +35,7 @@ def basic_radar_config():
         "maxConnTry": 2,
         "bytesNum": 2048,
         "sampleFreq": 10.5,
-        "bscanRefreshInterval": 1000,  # Refresh view per 100 line data
+        "bscanRefreshInterval": 300,  # Refresh view per 100 line data
         "receiveFreq": 0.1,  # Unit: second
         "calculateFreq": 0.5,
         "patchSize": 416,
@@ -70,11 +70,3 @@ def basic_instruct_config():
     }
     return instructions
 
-
-def basic_graph_config():
-    graphConfig = {
-        "Xrange": [-32786, 32786],
-        "refreshFreq": 100,  # ms
-        "plotPoints": 512,
-    }
-    return graphConfig
