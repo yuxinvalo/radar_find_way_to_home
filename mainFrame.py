@@ -459,6 +459,8 @@ class MainFrame(QtWidgets.QWidget):
                     self.stop_collection_action()
                     return
 
+            if type(bytesData) == int:
+                return
             plots = toolsradarcas.byte_2_signedInt(bytesData)
             cleanPlots = toolsradarcas.clean_realtime_data(plots)
             reversePlots = np.expand_dims(np.asarray(plots).T, axis=1)
@@ -577,7 +579,6 @@ class MainFrame(QtWidgets.QWidget):
                             return
                     else:
                         if self.conn.connect() == 0:
-                            instruments = toolsradarcas.hex_Instruction_2_bytes(build_instruments(res))
                             if self.conn.send(instruments) != 0:
                                 QMessageBoxSample.showDialog(self, "Configurate Radar failed...Please retry!",
                                                              appconfig.ERROR)

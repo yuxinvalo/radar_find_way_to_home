@@ -27,7 +27,7 @@ def clean_realtime_data(aTuple):
 def calculate_dist_per_line(measWheelConfig):
     distPerPulse = round((measWheelConfig.get("measWheelDiameter") / measWheelConfig.get("pulseCountPerRound")), 4)
     pulsePerCM = round(1 / distPerPulse, 4)
-    distPerLine = round(distPerPulse * pulsePerCM)
+    distPerLine = distPerPulse * int(pulsePerCM)  # round(distPerPulse * pulsePerCM, 4)
     return distPerPulse, pulsePerCM, distPerLine
 
 
@@ -48,21 +48,27 @@ def save_data(data, filepath='', format='pickle', instType='radar', times=0):
     elif format == 'GPR':
         return save_data_GPR(data, filepath)
     else:
-        return errorhandle.UNKNOW_FILE_FORMAT
+        return errorhandle.UNKNOWN_FILE_FORMAT
 
 
 def save_data_GPR(data, filepath=''):
     try:
-        filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()) + '.GBR'
+        filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()) + '.GPR'
         if not filepath:
             filepath = respath.DEFAULT_DATA_NAME + filename
+        elif filepath[-1] == '/':
+            filepath = filepath + filename
         else:
             filepath = filepath + '/' + filename
         f = open(filepath, 'wb')
+        if type(data) == str:
+            data = bytes(data, encoding='utf8')
         f.write(data)
         f.close()
+    except TypeError:
+        return errorhandle.SAVE_GPR_TYPEERROR
     except IOError:
-        return errorhandle.SAVE_GPR_FAILURE
+        return errorhandle.SAVE_GPR_IOERROR
     return f.name
 
 
@@ -94,7 +100,7 @@ def loadFile(filename=''):
     import pickle
     import numpy as np
     if not filename:
-        filepath = respath.DEFAULT_DATA_NAME + '20201227.pkl'
+        return errorhandle.UNKNOWN_FILE_NAME
     elif len(filename.split('/')) > 1:
         filepath = filename
         fileformat = filename.split('/')[-1].split('.')[1]
@@ -108,7 +114,7 @@ def loadFile(filename=''):
         elif fileformat == 'npy':
             return np.load(f)
         else:
-            return errorhandle.UNKNOW_FILE_FORMAT
+            return errorhandle.UNKNOWN_FILE_FORMAT
     except IOError:
         return errorhandle.LOAD_FILE_IO_ERROR
 

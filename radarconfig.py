@@ -164,11 +164,11 @@ class RadarConfigurationDialog(ConfigurationDialog):
 def build_instruments(radarConfig, measWheelParams):
     import math
     bytesNum = int(math.log(radarConfig.get("bytesNum"))/math.log(2) - 9)
-    sampleRate = int(radarConfig.get("sampleFreq") / 5.25) - 1
+    sampleRate = int(radarConfig.get("sampleFreq") / 5.25)
     if sampleRate == 4:
-        sampleRate = 2
-    elif sampleRate == 8:
         sampleRate = 3
+    elif sampleRate == 8:
+        sampleRate = 4
     instruments = appconfig.basic_instruct_config().get("bytesNum")
     instruments.append(bytesNum)
     instruments.append(appconfig.basic_instruct_config().get("sampleFreq")[0])
