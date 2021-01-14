@@ -112,6 +112,18 @@ class WirelessConnexion(Connexion):
             return errorhandle.DISCONNECT_ERROR
         return res
 
+    def recv_wheel(self, recvSize):
+        if self.connected:
+            try:
+                res = self.tcpClient.recv(recvSize)
+                # print(len(res))
+            except Exception as e:
+                return -1
+            return res
+        else:
+            logging.error("Socket disconnect when trying to send data..")
+            return errorhandle.DISCONNECT_ERROR
+
     def reconnect(self):
         time.sleep(2)
         return self.connect()

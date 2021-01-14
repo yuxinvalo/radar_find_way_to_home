@@ -178,7 +178,9 @@ def build_instruments(radarConfig, measWheelParams):
 
     # Measurement Wheel
     colMode = radarConfig.get("collectionMode")
-    if colMode in strs.strings.get("discontiMeas"):
+    if colMode in strs.strings.get("wheelMeas"):
+        instruments.append(appconfig.basic_instruct_config().get("wheelMeas")[0])
+        instruments.append(1)
         pulsePerCM = int(measWheelParams[appconfig.PULSE_PER_CM])
         instruments.append(appconfig.basic_instruct_config().get("precise")[0])
         instruments.append(pulsePerCM)

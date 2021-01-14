@@ -9,6 +9,7 @@ strings = {
     "stop": ['停止', 'Stop'],
     "connectRadar": ['连接雷达', 'Connect Radar'],
     "dataCounter": ['数据收集计数器', 'Data counter'],
+    "moveDist": ['移动距离', 'Move Distance'],
 
     "config": ['配置', 'Configuration'],
     "gpsConfig": ['GPS配置', 'GPS Configuration'],
@@ -64,7 +65,7 @@ strings = {
     "constGain": ['固定增益', 'Const. Gain'],
     "continMeas": ['连续测', 'Continuous Meas.'],
     "trigByCollec": ['采集触发', 'Trig. By Collection'],
-    "discontiMeas": ['点测', 'Discontinuous Meas.'],
+    "wheelMeas": ['测距轮', 'Discontinuous Meas.'],
 
     # Measurement Times
     "firstTime": ['第一次测量', 'First Meas.'],
@@ -103,7 +104,7 @@ combobox = {
     "accumTime": ['1', '2', '3', '4'],
     "measureAccuracy": ['1cm', '2cm', '3cm'],
     "trigMode": ['trigByCollec', 'others'],
-    "collectionMode": ['continMeas', 'discontiMeas'],
+    "collectionMode": ['continMeas', 'wheelMeas'],
     "filtersType": ['bandpassFilter', 'bandRejectFilter'],
     "collecInterfMode": ['NET', 'USB', 'COM'],
 }
