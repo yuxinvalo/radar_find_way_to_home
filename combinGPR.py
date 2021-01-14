@@ -21,6 +21,7 @@ import numpy as np
 
 import appconfig
 import errorhandle
+import toolsradarcas
 
 FILE_INFO_BYTE_NUM = 1065
 ENTITLE_SIZE = 90
@@ -50,9 +51,9 @@ class GPRTrace(object):
         fMarkHeight = struct.pack('f', random.randint(0, 30) * 1.5)
         usMarkFlag = struct.pack('H', 400)
         return [gpsOffset + chReverse, ucTrcCount + ucVoltage \
-                       + wheelOffset + chPhotoName1 + chPhotoName2 \
-                       + usMetalDiameter + usMetaDepth + bMetalFlag \
-                       + chMarkName + fMarkHeight + usMarkFlag]
+                + wheelOffset + chPhotoName1 + chPhotoName2 \
+                + usMetalDiameter + usMetaDepth + bMetalFlag \
+                + chMarkName + fMarkHeight + usMarkFlag]
 
     def fill_timer(self):
         curr = datetime.datetime.now()
@@ -66,8 +67,10 @@ class GPRTrace(object):
         return ucYear + ucMonth + ucDay + ucHour + ucMin + ucSec + ucMilSec
 
     def fill_gps3dim_data(self, gpsPoints):
+        if len(gpsPoints) == 2:
+            gpsPoints.append(0)
         gpsPointsBytes = struct.pack('3d', gpsPoints[0], gpsPoints[1],
-                                          gpsPoints[2])
+                                     gpsPoints[2])
         return gpsPointsBytes
 
     def structure_entitle(self, gpsPoints):
@@ -109,18 +112,24 @@ class GPRTrace(object):
 
     def pack_single_GRP_data(self, singleGpsPoints, singleRadarData):
         entitle = self.structure_entitle(singleGpsPoints)
-        if len(singleRadarData) != appconfig.basic_radar_config().get("bytesNum"):
+        if type(singleRadarData) == list:
+            singleRadarDataBytes = toolsradarcas.signedInt_2_byte(singleRadarData)
+        if len(singleRadarDataBytes) != appconfig.basic_radar_config().get("bytesNum"):
             return errorhandle.PACK_RADAR_DATA_SIZE_ERROR
         if len(entitle) != ENTITLE_SIZE:
             return errorhandle.PACK_ENTITLE_ERROR
-        return entitle + singleRadarData
+        return entitle + singleRadarDataBytes
 
     def pack_GRP_data(self, gpsPoints, radarData):
         package = self.fileInfoByte
         if len(gpsPoints) != len(radarData):
             return errorhandle.PACK_GPS_RADAR_SHAPE_ERROR
         for index, ele in enumerate(radarData):
-            package = package + self.pack_single_GRP_data(gpsPoints[index], radarData[index])
+            tempBytesLine = self.pack_single_GRP_data(gpsPoints[index], radarData[index])
+            if type(tempBytesLine) != int:
+                package = package + tempBytesLine
+            else:
+                return tempBytesLine
         return package
 
     @staticmethod
@@ -172,4 +181,3 @@ class GPRTrace(object):
                 return errorhandle.LOAD_GPR_SIZE_ERROR
         except Exception as e:
             return errorhandle.LOAD_GPR_FAILURE
-

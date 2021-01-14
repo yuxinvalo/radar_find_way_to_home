@@ -19,6 +19,10 @@ def hex_Instruction_2_bytes(instruction):
     return struct.pack("%dB" % (len(instruction)), *instruction)
 
 
+def signedInt_2_byte(sdata):
+    return struct.pack("%dh" % (len(sdata)), *sdata)
+
+
 # Del title info like 29268, 29268, 4095, 2296
 def clean_realtime_data(aTuple):
     return aTuple[4: -1]
