@@ -90,6 +90,7 @@ class MainFrame(QtWidgets.QWidget):
         self.setLayout(self.mainLayout)
         self.useWheel = False
         self.isCollecting = False
+        self.buffer = []
 
         # Vars for debugging
         self.isLoadFirstData = False
@@ -235,14 +236,21 @@ class MainFrame(QtWidgets.QWidget):
         self.statePanel.addWidget(self.unregisteredCounterStrLable)
         self.statePanel.addWidget(self.unregisteredCounterLabel)
 
-        self.moveDistStrLabel = QtWidgets.QLabel(strs.strings.get("moveDist")[appconfig.language] + ": ")
-        self.moveDistLabel = QtWidgets.QLabel()
+        self.priorMoveDistStrLabel = QtWidgets.QLabel(strs.strings.get("pMoveDist")[appconfig.language] + ": ")
+        self.priorMoveDistLabel = QtWidgets.QLabel()
+        self.unregMoveDistStrLabel = QtWidgets.QLabel(strs.strings.get("unRegMoveDist")[appconfig.language] + ": ")
+        self.unregMoveDistLabel = QtWidgets.QLabel()
         if not self.useWheel:
-            self.moveDistStrLabel.setVisible(False)
-            self.moveDistLabel.setVisible(False)
-        self.moveDistLabel.setFont(QtGui.QFont("Times", pointSize=20, weight=QtGui.QFont.Bold))
-        self.statePanel.addWidget(self.moveDistStrLabel)
-        self.statePanel.addWidget(self.moveDistLabel)
+            self.priorMoveDistStrLabel.setVisible(False)
+            self.priorMoveDistLabel.setVisible(False)
+            self.unregMoveDistStrLabel.setVisible(False)
+            self.unregMoveDistLabel.setVisible(False)
+        self.priorMoveDistLabel.setFont(QtGui.QFont("Times", pointSize=20, weight=QtGui.QFont.Bold))
+        self.unregMoveDistLabel.setFont(QtGui.QFont("Times", pointSize=20, weight=QtGui.QFont.Bold))
+        self.statePanel.addWidget(self.priorMoveDistStrLabel)
+        self.statePanel.addWidget(self.priorMoveDistLabel)
+        self.statePanel.addWidget(self.unregMoveDistStrLabel)
+        self.statePanel.addWidget(self.unregMoveDistLabel)
 
         self.mainLayout.addLayout(self.statePanel, 4, 0, 1, 2)
         self.counterTimer = QtCore.QTimer(self)
@@ -253,14 +261,24 @@ class MainFrame(QtWidgets.QWidget):
     def counter_data(self):
         """
             Counter data number thread will invoke this method to refresh the number
+            If user use Wheel to get the distance, it refreshes the distance too
         """
         if not self.realTime:
             self.counterLabel.setText(str(self.counter))
         else:
             self.counterLabel.setText(str(self.counter))
-            if self.useWheel:
+            if self.useWheel and self.isCollecting and self.measTimes == 1:
                 moveDist = round((self.counter * self.measWheelParams[appconfig.DIST_PER_LINE])/100, 4)
-                self.moveDistLabel.setText(str(moveDist) + "m")
+                self.priorMoveDistLabel.setText(str(moveDist) + "m")
+            elif self.useWheel and not self.isCollecting and self.priorCounterLable.text().isnumeric() and self.measTimes == 1:
+                moveDist = round((int(self.priorCounterLable.text()) * self.measWheelParams[appconfig.DIST_PER_LINE])/100 , 4)
+                self.priorMoveDistLabel.setText(str(moveDist) + "m")
+            elif self.useWheel and self.isCollecting and self.measTimes == 2:
+                moveDist = round((self.counter * self.measWheelParams[appconfig.DIST_PER_LINE]) / 100, 4)
+                self.unregMoveDistLabel.setText(str(moveDist) + "m")
+            elif self.useWheel and not self.isCollecting and self.unregisteredCounterLabel.text().isnumeric() and self.measTimes == 2:
+                moveDist = round((int(self.unregisteredCounterLabel.text()) * self.measWheelParams[appconfig.DIST_PER_LINE]) / 100, 4)
+                self.unregMoveDistLabel.setText(str(moveDist) + "m")
 
     def set_widgets_enable(self):
         self.filterConfigBtn.setEnabled(False)
@@ -384,7 +402,7 @@ class MainFrame(QtWidgets.QWidget):
             while collecting stoped and numWindow == 0: stop all and init radarNPData, but the prior measurement data like
                 GPS, feats is still in memory.
         """
-        print("Start calculate")
+        print("Start calculate", end='==>')
         if self.measTimes == 1:
             print("Counter : " + str(self.counter) + " Current calculate index:: " + str(
                 self.findWayToHome.patchSize + (self.numWindow * self.basicRadarConfig.get("priorMapInterval"))))
@@ -481,24 +499,64 @@ class MainFrame(QtWidgets.QWidget):
             if type(bytesData) == int:
                 return
             plots = toolsradarcas.byte_2_signedInt(bytesData)
+
+            """ To resolve data length is not enough to bytesNum, a little complex========>>>
+            如果雷达发回来的数据不满1024（设定的采样点数）， 就把当前的数据保存到缓冲区和下一条数据拼接起来
+            简而言之，就是保证雷达发回来的数据shape为设定的点
+            """
+            title_index = toolsradarcas.search_radar_title(plots)
+            plots = list(plots)
+            if title_index == 0 and len(plots) == self.basicRadarConfig.get("sampleNum"):
+                pass
+            elif title_index == 0 and len(plots) < self.basicRadarConfig.get("sampleNum"):
+                if len(self.buffer) != 0:
+                    logging.error("Unexcepted data length found, just ignore it..")
+                self.buffer = plots
+                return
+            elif title_index != 0 and len(plots) == self.basicRadarConfig.get("sampleNum"):
+                if title_index != -1:
+                    if len(self.buffer) + title_index == self.basicRadarConfig.get("sampleNum"):
+                        self.buffer.extend(plots[:title_index])
+                        temp = self.buffer
+                        self.buffer = plots[title_index:]
+                        plots = temp
+                    else:
+                        logging.error("Unexcepted data found, length is not enough..ignore it..")
+                        self.buffer = plots[title_index:]
+                        return
+                else:
+                    logging.error("Unexcepted data found: length is enough but no title found!")
+                    return
+            elif title_index != 0 and len(plots) < self.basicRadarConfig.get("sampleNum"):
+                if title_index != -1:
+                    if len(self.buffer) + title_index == self.basicRadarConfig.get("sampleNum"):
+                        self.buffer.extend(plots[:title_index])
+                        temp = self.buffer
+                        self.buffer = plots[title_index:]
+                        plots = temp
+                else:
+                    if len(self.buffer) + len(plots) == self.basicRadarConfig.get("sampleNum") and \
+                        self.buffer[0:3] == appconfig.RADAR_HEADER:
+                        self.buffer.extend(plots)
+                        plots = self.buffer
+                        self.buffer = []
+                    elif len(self.buffer) + len(plots) < self.basicRadarConfig.get("sampleNum") and \
+                        self.buffer[0:3] == appconfig.RADAR_HEADER:
+                        self.buffer.extend(plots)
+                        return
+                    elif self.buffer[0:3] != appconfig.RADAR_HEADER:
+                        logging.error("Buffer is not start with RADAR HEADER, Just ignore it!")
+                        self.buffer = []
+                    else:
+                        logging.error("Unexcepted data found: concat length is too long..Just cut it")
+                        self.buffer.extend(plots[:self.basicRadarConfig.get("sampleNum")-len(self.buffer)])
+
+            # =========================================<<<
             cleanPlots = toolsradarcas.clean_realtime_data(plots)
             reversePlots = np.expand_dims(np.asarray(plots).T, axis=1)
-            print("Rec radar data shape: " + str(reversePlots.shape))
             if self.findWayToHome.radarNPData.shape == (1, 1):
                 self.findWayToHome.radarNPData = reversePlots
             else:
-                # To resolve a strange shape Error========>>>
-                if reversePlots.shape != (1024, 1):
-                    self.errorData.append(plots)
-                    logging.info("Found an exception data!")
-                    if len(self.errorData) > 2:
-                        res = toolsradarcas.save_data(self.errorData, format='pickle', instType='debug')
-                        logging.info(res)
-                        self.stop_collection_action()
-                        return
-                    else:
-                        return
-                # =========================================<<<
                 self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
                 if self.findWayToHome.radarNPData.shape[1] % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
                     self.bscanPanel.plot_bscan(self.findWayToHome.radarNPData[:, -300:-1].T)
@@ -615,6 +673,7 @@ class MainFrame(QtWidgets.QWidget):
                                 return
                 logging.info("Send configuration to radar: " + str(instruments))
                 self.basicRadarConfig["bytesNum"] = res.get("bytesNum")
+                self.basicRadarConfig["sampleNum"] = res.get("sampleNum")
                 self.basicRadarConfig["sampleFreq"] = res.get("sampleFreq")
                 self.basicRadarConfig["patchSize"] = res.get("patchSize")
                 self.basicRadarConfig["deltaDist"] = res.get("deltaDist")
@@ -624,12 +683,16 @@ class MainFrame(QtWidgets.QWidget):
                 self.basicRadarConfig["collectionMode"] = res.get("collectionMode")
                 if self.basicRadarConfig["collectionMode"] in strs.strings.get("wheelMeas"):
                     self.useWheel = True
-                    self.moveDistStrLabel.setVisible(True)
-                    self.moveDistLabel.setVisible(True)
+                    self.priorMoveDistStrLabel.setVisible(True)
+                    self.priorMoveDistLabel.setVisible(True)
+                    self.unregMoveDistStrLabel.setVisible(True)
+                    self.unregMoveDistLabel.setVisible(True)
                 else:
                     self.useWheel = False
-                    self.moveDistStrLabel.setVisible(False)
-                    self.moveDistLabel.setVisible(False)
+                    self.priorMoveDistStrLabel.setVisible(False)
+                    self.priorMoveDistLabel.setVisible(False)
+                    self.unregMoveDistStrLabel.setVisible(False)
+                    self.unregMoveDistLabel.setVisible(False)
                 self.findWayToHome.load_config(res)
                 logging.info("radar settings is updated to: " + str(res))
             else:
