@@ -24,6 +24,13 @@ def clean_realtime_data(aTuple):
     return aTuple[4: -1]
 
 
+def search_radar_title(aTuple):
+    for index, ele in enumerate(aTuple):
+        if ele == 29268 and aTuple[index+1] == 29268 and aTuple[index+2] == 4095:
+            return index
+    return -1
+
+
 def calculate_dist_per_line(measWheelConfig):
     distPerPulse = round((measWheelConfig.get("measWheelDiameter") / measWheelConfig.get("pulseCountPerRound")), 4)
     pulsePerCM = round(1 / distPerPulse, 4)

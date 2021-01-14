@@ -9,7 +9,8 @@ strings = {
     "stop": ['停止', 'Stop'],
     "connectRadar": ['连接雷达', 'Connect Radar'],
     "dataCounter": ['数据收集计数器', 'Data counter'],
-    "moveDist": ['移动距离', 'Move Distance'],
+    "pMoveDist": ['prior移动距离', 'Prior Move Dist.'],
+    "unRegMoveDist": ['Unreg移动距离', 'Unreg. Move Dist.'],
 
     "config": ['配置', 'Configuration'],
     "gpsConfig": ['GPS配置', 'GPS Configuration'],

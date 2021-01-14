@@ -19,6 +19,8 @@ DIST_PER_PULSE = 0
 PULSE_PER_CM = 1
 DIST_PER_LINE = 2
 
+RADAR_HEADER = [29268, 29268, 4095]
+
 
 def basic_log_config(debug=True):
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s"
@@ -38,6 +40,7 @@ def basic_radar_config():
         "writeTimeOut": 3,
         "maxConnTry": 2,
         "bytesNum": 2048,
+        "sampleNum": 1024,
         "sampleFreq": 10.5,
         "bscanRefreshInterval": 300,  # Refresh view per 100 line data
         "receiveFreq": 0.05,  # Unit: second
@@ -47,7 +50,7 @@ def basic_radar_config():
         "unregisteredMapInterval": 400,
         "firstCutRow": 111,
         "deltaDist": 0.0138,
-        "collectionMode": '点测'
+        "collectionMode": '连续测'
     }
     return basicRadarConfig
 

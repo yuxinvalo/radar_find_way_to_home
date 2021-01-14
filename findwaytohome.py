@@ -142,7 +142,7 @@ class FindWayToHome(object):
                 windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
             self.gpsNPData = np.append(self.gpsNPData, windowsGPSXYZMatrix, axis=1)
 
-        print(self.gpsNPData.shape)
+        # print(self.gpsNPData.shape)
 
         priorMap = np.expand_dims(singleWindowRadarData, axis=0)
 
@@ -208,7 +208,7 @@ class FindWayToHome(object):
             # self.files.append(
                 # toolsradarcas.save_data(self.unregisteredFeats, format='pickle', instType='feats', times=2))
             self.files.append(toolsradarcas.save_data(self.windows, format='pickle', instType='windows', times=2))
-            self.sythetic_feats()
+            # self.sythetic_feats()
 
     def unregistered_find_way(self, numWindow, isClean=True, endGaindB=18):
         """
