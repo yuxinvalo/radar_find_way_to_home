@@ -5,6 +5,7 @@
 
 import logging
 import time
+import csv
 
 import pynmea2
 from PyQt5 import QtWidgets, QtCore, QtGui
@@ -32,6 +33,9 @@ from radarconfig import RadarConfigurationDialog, build_instruments
 from value import respath
 from wavegraph import WaveGraph
 
+# To force theses variable saved in,
+cleanPlots = []
+reversePlots = []
 
 class MainFrame(QtWidgets.QWidget):
     """
@@ -71,12 +75,16 @@ class MainFrame(QtWidgets.QWidget):
         self.init_chart_panel()
         self.init_state_panel()
         self.set_widgets_enable()
+        self.init_note_perf() # =================FOR DEBUG=======================
+        # Init threads=================
         self.collectRadarThread = WorkThread(freq=self.basicRadarConfig.get("receiveFreq"))
         self.collectRadarThread.signal_updateUI.connect(self.start_radar_collection_action)
         self.collectGPSThread = WorkThread(freq=self.basicGPSConfig.get("receiveFreq"))
         self.collectGPSThread.signal_updateUI.connect(self.start_gps_collection_action)
         self.calculateThread = WorkThread(freq=self.basicRadarConfig.get("calculateFreq"))
         self.calculateThread.signal_updateUI.connect(self.start_calculate_action)
+        self.drawPicThread = WorkThread(freq=self.basicRadarConfig.get("receiveFreq"))
+        self.drawPicThread.signal_updateUI.connect(self.draw_pic_action)
 
         self.conn = WirelessConnexion(self.basicRadarConfig)
 
@@ -258,6 +266,20 @@ class MainFrame(QtWidgets.QWidget):
         self.counterTimer.start(self.basicRadarConfig.get("receiveFreq") * 100)
 
 
+    def init_note_perf(self):
+        """
+        To test performance of collection and calculate module:
+        """
+        self.perfColRadar = "col Radar"
+        self.perfColGPS = "col GPS"
+        self.perfCal = "calcualte"
+        self.drawTime = "draw"
+        # self.perf = {self.perfColRadar:[], self.perfColGPS:[], self.perfCal:[], self.drawTime:[]}
+        self.perfTrans2NP = "trans"
+        self.perfAppendNP = "append"
+        self.perf = {self.perfTrans2NP: [], self.perfAppendNP:[], self.perfColRadar:[], self.perfColGPS:[], self.perfCal:[]}
+
+
     def counter_data(self):
         """
             Counter data number thread will invoke this method to refresh the number
@@ -372,6 +394,7 @@ class MainFrame(QtWidgets.QWidget):
 
         self.isCollecting = True
         self.collectRadarThread.start()
+        self.drawPicThread.start()
         if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected and self.measTimes == 1:
             self.collectGPSThread.start()
         if self.realTime and not self.basicRadarConfig.get("useGPS") and self.measTimes == 1:
@@ -403,6 +426,7 @@ class MainFrame(QtWidgets.QWidget):
                 GPS, feats is still in memory.
         """
         print("Start calculate", end='==>')
+        caltime = time.clock()
         if self.measTimes == 1:
             print("Counter : " + str(self.counter) + " Current calculate index:: " + str(
                 self.findWayToHome.patchSize + (self.numWindow * self.basicRadarConfig.get("priorMapInterval"))))
@@ -421,9 +445,12 @@ class MainFrame(QtWidgets.QWidget):
                 self.gpsConfigBtn.setEnabled(True)
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
+                self.drawPicThread.stop()
+                self.drawPicThread.isexit = False
                 self.counter = 0
                 self.numWindow = 0
                 self.findWayToHome.save_algo_data(1)
+
             elif self.isCollecting == False and self.numWindow == 0:
                 self.startButton.setEnabled(True)
                 self.stopButton.setEnabled(False)
@@ -431,9 +458,12 @@ class MainFrame(QtWidgets.QWidget):
                 self.gpsConfigBtn.setEnabled(True)
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
+                self.drawPicThread.stop()
+                self.drawPicThread.isexit = False
                 self.findWayToHome.init_vars()
                 self.counter = 0
                 self.numWindow = 0
+
         else:
             print("SECOND===Counter : " + str(self.counter) + " Current calculate index: " + str(
                 self.findWayToHome.patchSize + (self.numWindow * self.basicRadarConfig.get("unregisteredMapInterval")))
@@ -451,11 +481,14 @@ class MainFrame(QtWidgets.QWidget):
                 self.gpsConfigBtn.setEnabled(True)
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
+                self.drawPicThread.stop()
+                self.drawPicThread.isexit = False
                 self.findWayToHome.save_algo_data(2)
                 self.counter = 0
                 self.numWindow = 0
                 self.findWayToHome.init_vars()
-                # self.findWayToHome = FindWayToHome(self.basicRadarConfig)
+
+
             elif self.numWindow == 0 and self.isCollecting == False:
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
@@ -465,11 +498,17 @@ class MainFrame(QtWidgets.QWidget):
                 self.stopButton.setEnabled(False)
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
-                self.findWayToHome.radarNPData = np.zeros((1,1))
+                self.drawPicThread.stop()
+                self.drawPicThread.isexit = False
+                self.findWayToHome.init_vars()
+
 
         self.lastCounter = self.counter
+        self.perf.get(self.perfCal).append(time.clock() - caltime)
 
     def start_radar_collection_action(self):
+        global cleanPlots
+        global reversePlots
         """
             Radar data collector thread will invoke this method with frequency define at appconfig.py
             There is 2 mode of collection: realtime or not realtime
@@ -502,7 +541,7 @@ class MainFrame(QtWidgets.QWidget):
 
             """ To resolve data length is not enough to bytesNum, a little complex========>>>
             如果雷达发回来的数据不满1024（设定的采样点数）， 就把当前的数据保存到缓冲区和下一条数据拼接起来
-            简而言之，就是保证雷达发回来的数据shape为设定的点
+            简而言之，就是保证雷达发回来的数据shape为设定的点.
             """
             title_index = toolsradarcas.search_radar_title(plots)
             plots = list(plots)
@@ -552,46 +591,67 @@ class MainFrame(QtWidgets.QWidget):
                         self.buffer.extend(plots[:self.basicRadarConfig.get("sampleNum")-len(self.buffer)])
 
             # =========================================<<<
+            trans = time.clock()
             cleanPlots = toolsradarcas.clean_realtime_data(plots)
             reversePlots = np.expand_dims(np.asarray(plots).T, axis=1)
+            self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
+            append = time.clock()
             if self.findWayToHome.radarNPData.shape == (1, 1):
                 self.findWayToHome.radarNPData = reversePlots
             else:
                 self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
-                if self.findWayToHome.radarNPData.shape[1] % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-                    self.bscanPanel.plot_bscan(self.findWayToHome.radarNPData[:, -300:-1].T)
-
-                # print("radar data length:" + str(self.findWayToHome.radarNPData.shape[1]) + " | gps data length:"
-                #       + str(len(self.findWayToHome.gpsData)))
-            self.chartPanel.handle_data(cleanPlots)
 
         else:  # Mock realtime data
+            trans = time.clock()
             cleanPlots = self.mockData[self.counter].tolist()
-            # self.findWayToHome.radarData.append(cleanPlots)
-            reversePlots = np.expand_dims(np.asarray(cleanPlots).T, axis=1)
-            # if len(self.findWayToHome.radarData) <= 3:
-            if self.findWayToHome.radarNPData.shape == (1, 1):
-                self.findWayToHome.radarNPData = reversePlots
-            else:
-                self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
-                if self.findWayToHome.radarNPData.shape[1] % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-                    self.bscanPanel.plot_bscan(self.findWayToHome.radarNPData[:, -1000:-1].T)
-                if self.findWayToHome.radarNPData.shape[1] == len(self.mockData):
-                    logging.info("Mock data length is over....")
-                    self.stop_collection_action()
-                    return
-            self.chartPanel.handle_data(cleanPlots)
+            self.findWayToHome.radarData.append(cleanPlots)
+            # reversePlots = np.expand_dims(np.asarray(cleanPlots).T, axis=1)
+            self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
+            append = time.clock()
+
+            if self.counter == len(self.mockData) - 1:
+                logging.info("Mock data length is over....")
+                self.stop_collection_action()
+
+            # if self.findWayToHome.radarNPData.shape == (1, 1):
+            #     self.findWayToHome.radarNPData = reversePlots
+            # else:
+            #     self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
+            #     if self.findWayToHome.radarNPData.shape[1] == len(self.mockData):
+            #         logging.info("Mock data length is over....")
+            #         self.stop_collection_action()
+            #         return
         self.counter += 1
+
+        #  ======================Performance===============
+        self.perf.get(self.perfAppendNP).append(time.clock() - append)
+        # self.perf[self.perfColRadar].append(time.clock()-colRadarTime)
+        if len(self.perf[self.perfAppendNP]) % 1000 == 0:
+            res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
+            self.init_note_perf()
+
+    def draw_pic_action(self):
+        global cleanPlots
+        self.chartPanel.handle_data(cleanPlots)
+        # if self.findWayToHome.radarNPData.shape != (1,1):
+        #     if self.findWayToHome.radarNPData.shape[1] % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
+        #         self.bscanPanel.plot_bscan(self.findWayToHome.radarNPData[:, -1000:-1].T)
+        if self.isCollecting == False and self.counter > 0:
+            self.bscanPanel.plot_bscan(self.findWayToHome.radarData)
+            self.drawPicThread.stop()
+            self.drawPicThread.isexit = False
+            return
+        if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
+            self.bscanPanel.plot_bscan(self.findWayToHome.radarData[self.basicRadarConfig.get("bscanRefreshInterval")*-1:-1])
+
         QApplication.processEvents()
-
-
 
     def start_gps_collection_action(self):
         """
             GPS collector aims to receive GPS serial data,  for each data send back, it will be parsed to GGA/GNS(GPS/beidou)
             format and retrieves latitude, longitude and altitude as a list and save in memory.
         """
-        # logging.info("Start GPS collection...GPS Data length:" + str(len(self.findWayToHome.gpsData)))
+        colGPSTime = time.clock()
         if self.realTime and self.useGPSCheckBox.isChecked():
             # Rec GPS Data
             if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected:
@@ -606,10 +666,13 @@ class MainFrame(QtWidgets.QWidget):
 
         else:
             if self.measTimes == 1:
+                if self.gpsCounter == len(self.mockGPSData) - 1:
+                    self.stop_collection_action()
+                    return
                 singleGPSCleanData = self.mockGPSData[self.gpsCounter]
                 self.findWayToHome.gpsData.append(singleGPSCleanData)
                 self.gpsCounter += 1
-
+        self.perf.get(self.perfColGPS).append(time.clock() - colGPSTime)
 
     def stop_collection_action(self):
         """
@@ -655,6 +718,12 @@ class MainFrame(QtWidgets.QWidget):
             logging.info("GPS settings has no change.")
 
     def radar_config_action(self):
+        """
+        The logic is simple, open the configuration panel, and configure it.
+        If it's running on reatime mode, the configurations will be sent to radar, also,
+        if user use wheel to measure the moving distance, the distance label will be visible
+        :return:
+        """
         radarconfView = RadarConfigurationDialog(self.basicRadarConfig)
         if radarconfView.exec_():
             res = radarconfView.get_data()
@@ -701,6 +770,11 @@ class MainFrame(QtWidgets.QWidget):
             logging.info("radar settings has no change.")
 
     def measwheel_config_action(self):
+        """
+        Openning the measurement wheel configuration to set the wheel's parameters
+        Then calculating the coeff of distance
+        :return:
+        """
         measwheelconf = MeasurementWheelConfigurationDialog(self.basicMeasWheelConfig)
         if measwheelconf.exec_():
             res = measwheelconf.get_data()
@@ -799,6 +873,7 @@ class WorkThread(QThread):
         self.qmut = QMutex()
         self.isexit = False
         self.freq = freq
+        self.setStackSize(10240)
 
     def run(self):
         while True:

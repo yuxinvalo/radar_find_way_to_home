@@ -28,6 +28,9 @@ ENTITLE_SIZE = 90
 
 
 class GPRTrace(object):
+    """
+    This class allows user to merge GPR 3-D data and RADAR data as GPR format
+    """
     def __init__(self):
         super(GPRTrace, self).__init__()
         self.fileInfoByte = bytes(FILE_INFO_BYTE_NUM)
@@ -67,6 +70,11 @@ class GPRTrace(object):
         return ucYear + ucMonth + ucDay + ucHour + ucMin + ucSec + ucMilSec
 
     def fill_gps3dim_data(self, gpsPoints):
+        """
+        pack gps data as signed integer
+        :param gpsPoints: A single list of gps data
+        :return: Match bytes
+        """
         if len(gpsPoints) == 2:
             gpsPoints.append(0)
         gpsPointsBytes = struct.pack('3d', gpsPoints[0], gpsPoints[1],
@@ -75,6 +83,7 @@ class GPRTrace(object):
 
     def structure_entitle(self, gpsPoints):
         """
+        Just compo the mesh info..
         float		   fGPSOffset;//4
 
         char chReserve[2]; //2
@@ -121,6 +130,12 @@ class GPRTrace(object):
         return entitle + singleRadarDataBytes
 
     def pack_GRP_data(self, gpsPoints, radarData):
+        """
+        The function is used to pack a line of GPR data
+        :param gpsPoints: single gps data
+        :param radarData: single radar data
+        :return:
+        """
         package = self.fileInfoByte
         if len(gpsPoints) != len(radarData):
             return errorhandle.PACK_GPS_RADAR_SHAPE_ERROR

@@ -44,7 +44,7 @@ def basic_radar_config():
         "sampleFreq": 10.5,
         "bscanRefreshInterval": 300,  # Refresh view per 100 line data
         "receiveFreq": 0.05,  # Unit: second
-        "calculateFreq": 0.3,
+        "calculateFreq": 0.1,
         "patchSize": 416,
         "priorMapInterval": 5,
         "unregisteredMapInterval": 400,
@@ -53,6 +53,19 @@ def basic_radar_config():
         "collectionMode": '连续测'
     }
     return basicRadarConfig
+
+
+# def basic_algo_config():
+#     basicAlgoConfig = {
+#         "calculateFreq": 0.1,
+#         "patchSize": 416,
+#         "priorMapInterval": 5,
+#         "unregisteredMapInterval": 400,
+#         "firstCutRow": 111,
+#         "deltaDist": 0.0138,
+#         "maxNPLength": 50000,
+#     }
+#     return basicAlgoConfig
 
 
 def basic_meas_wheel_config():
