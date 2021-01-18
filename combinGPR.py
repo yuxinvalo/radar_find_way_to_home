@@ -31,9 +31,10 @@ class GPRTrace(object):
     """
     This class allows user to merge GPR 3-D data and RADAR data as GPR format
     """
-    def __init__(self):
+    def __init__(self, samplePoints=1024):
         super(GPRTrace, self).__init__()
         self.fileInfoByte = bytes(FILE_INFO_BYTE_NUM)
+        self.samplePoints = samplePoints
         # fileEntitle = structure_entitle()
 
     def fill_info(self):
@@ -125,13 +126,13 @@ class GPRTrace(object):
             if type(singleRadarData[0]) != int:
                 singleRadarData = [int(ele) for ele in singleRadarData]
             singleRadarDataBytes = toolsradarcas.signedInt_2_byte(singleRadarData)
-        if len(singleRadarDataBytes) != appconfig.basic_radar_config().get("bytesNum"):
+        if len(singleRadarDataBytes) != self.samplePoints * 2:
             return errorhandle.PACK_RADAR_DATA_SIZE_ERROR
         if len(entitle) != ENTITLE_SIZE:
             return errorhandle.PACK_ENTITLE_ERROR
         return entitle + singleRadarDataBytes
 
-    def pack_GRP_data(self, gpsPoints, radarData):
+    def pack_GRP_data_Dec(self, gpsPoints, radarData):
         """
         The function is used to pack a line of GPR data
         :param gpsPoints: single gps data
@@ -149,6 +150,22 @@ class GPRTrace(object):
                 return tempBytesLine
         return package
 
+    def pack_GPR_data(self, gpsPoints, radarData):
+        if len(gpsPoints) != len(radarData):
+            return errorhandle.PACK_GPS_RADAR_SHAPE_ERROR
+        exceptedLen = FILE_INFO_BYTE_NUM + (self.samplePoints * len(radarData) * 2) + \
+                      (len(radarData) * ENTITLE_SIZE)
+        package = bytearray(exceptedLen)
+        package[0:FILE_INFO_BYTE_NUM] = self.fileInfoByte
+        for index, ele in enumerate(radarData):
+            tempBytesLine = self.pack_single_GRP_data(gpsPoints[index], radarData[index])
+            if type(tempBytesLine) != int:
+                package[index*len(tempBytesLine)+FILE_INFO_BYTE_NUM:(index+1) * len(tempBytesLine)+FILE_INFO_BYTE_NUM] \
+                    = tempBytesLine
+            else:
+                return tempBytesLine
+        return package
+
     @staticmethod
     def load_GPR_data(filepath, samplePoint=512):
         dPosXYZs = []
@@ -156,9 +173,10 @@ class GPRTrace(object):
         try:
             file = Path(filepath)
             fileByte = file.stat().st_size
+            print(fileByte)
             traceByte = 90 + samplePoint * 2
-            traceNum = (fileByte - FILE_INFO_BYTE_NUM) / traceByte
-            if isinstance(traceNum, 'int'):
+            traceNum = int((fileByte - FILE_INFO_BYTE_NUM) / traceByte)
+            if isinstance(traceNum, int):
                 with open(file, 'rb') as f:
                     f.seek(FILE_INFO_BYTE_NUM)
                     for ele in range(0, traceNum):
@@ -195,8 +213,9 @@ class GPRTrace(object):
                         data = struct.unpack(str(samplePoint) + 'h', f.read(samplePoint * 2))
                         radarData.append(data)
                 dPosXYZs = np.array(dPosXYZs).T
-                return dPosXYZ, radarData
+                return dPosXYZs, radarData
             else:
                 return errorhandle.LOAD_GPR_SIZE_ERROR
         except Exception as e:
+            print(e)
             return errorhandle.LOAD_GPR_FAILURE

@@ -45,15 +45,15 @@ def basic_radar_config():
         "sampleNum": 1024,
         "sampleFreq": 10.5,
         "bscanRefreshInterval": 300,  # Refresh view per 100 line data
-        "receiveFreq": 0.02,  # Unit: second
-        "calculateFreq": 0.1,
+        "receiveFreq": 0.03,  # Unit: second
+        "calculateFreq": 0.15,
         "patchSize": 416,
         "priorMapInterval": 5,
         "unregisteredMapInterval": 400,
         "firstCutRow": 111,
         "deltaDist": 0.0138,
         "appendNum": 2,
-        "collectionMode": '连续测'
+        "collectionMode": '连续测',
     }
     return basicRadarConfig
 
@@ -68,7 +68,7 @@ def basic_meas_wheel_config():
 
 def basic_gps_config():
     basicGPSConfig = {
-        "receiveFreq": 1,
+        "receiveFreq": 0.03,
         "serialNum": 'COM3',
         "baudRate": 9600,
         "parityBit": 'NONE',
