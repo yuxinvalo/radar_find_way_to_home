@@ -116,14 +116,21 @@ class myFRCNN_img_retrieve(object):
         image = np.array(image, dtype=np.float64)  # 416*416
         assert image.shape == (416, 416)
         photo = np.stack((image, image, image), axis=2)  # （416，416，3）
-
-        # 图片预处理，归一化
-        photo = preprocess_input(np.expand_dims(photo, 0), mode='tf')  # （1,416,416,3）
-        #        preds = self.model_rpn.predict(photo) #输出是粗分类(1,6048,1) 粗框调整参数(1,6048,4) 和feature map(1,26,26,1024)
-        #        featuremap = preds[2] #featuremap
-
+        photo = np.expand_dims(photo, 0)
+        photo = photo / np.max(np.abs(photo))
         myfeature_map = self.featuremap_model.predict(photo)
         return myfeature_map
+
+        # image = np.array(image, dtype=np.float64)  # 416*416
+        # assert image.shape == (416, 416)
+        # photo = np.stack((image, image, image), axis=2)  # （416，416，3）
+        #
+        # photo = preprocess_input(np.expand_dims(photo, 0), mode='tf')  # （1,416,416,3）
+        # #        preds = self.model_rpn.predict(photo) #输出是粗分类(1,6048,1) 粗框调整参数(1,6048,4) 和feature map(1,26,26,1024)
+        # #        featuremap = preds[2] #featuremap
+        #
+        # myfeature_map = self.featuremap_model.predict(photo)
+        # return myfeature_map
 
     # ---------------------------------------------------#
     #   检测图片

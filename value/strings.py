@@ -9,6 +9,8 @@ strings = {
     "stop": ['停止', 'Stop'],
     "connectRadar": ['连接雷达', 'Connect Radar'],
     "dataCounter": ['数据收集计数器', 'Data counter'],
+    "pMoveDist": ['prior移动距离', 'Prior Move Dist.'],
+    "unRegMoveDist": ['Unreg移动距离', 'Unreg. Move Dist.'],
 
     "config": ['配置', 'Configuration'],
     "gpsConfig": ['GPS配置', 'GPS Configuration'],
@@ -60,11 +62,12 @@ strings = {
     "firstCutRow": ['裁剪起始坐标', 'Fist Cut Row'],
     "priorMapInterval": ['第一次裁剪间隔', 'Prior Map Interval'],
     "unregisteredMapInterval": ['第二次裁剪间隔', 'Unregistered Map Interval'],
+    "appendNum": ['特征对比数', 'Feat number to compare'],
 
     "constGain": ['固定增益', 'Const. Gain'],
     "continMeas": ['连续测', 'Continuous Meas.'],
     "trigByCollec": ['采集触发', 'Trig. By Collection'],
-    "discontiMeas": ['间断测', 'Discontinuous Meas.'],
+    "wheelMeas": ['测距轮', 'Discontinuous Meas.'],
 
     # Measurement Times
     "firstTime": ['第一次测量', 'First Meas.'],
@@ -93,17 +96,17 @@ combobox = {
                  '128000', '256000'],
     "parityBit": ['NONE', 'ODD', 'EVEN', 'MARK', 'SPACE'],
     "dataBit": ['8', '5', '6', '7'],
-    "stopBit": ['1', '1.5', '2'],
+    "stopBit": ['1.0', '1.5', '2.0'],
 
     "radarType": ['type1', 'type2'],
     "permittivity": ['4.1 glass', '5.8', '8.0'],
-    "sampleNum": ['512', '256', '1024', '2048'],
-    "sampleFreq": ['8GHz', '24GHz'],
+    "sampleNum": ['512', '1024', '2048'],
+    "sampleFreq": ['10.5GHz', '5.25GHz', '21.0GHz'],
     "gainMode": ['constGain', 'others'],
-    "accumTime": ['1', '2', '3', '4'],
+    "appendNum": ['1', '2', '3', '4'],
     "measureAccuracy": ['1cm', '2cm', '3cm'],
     "trigMode": ['trigByCollec', 'others'],
-    "collectionMode": ['continMeas', 'discontiMeas'],
+    "collectionMode": ['continMeas', 'wheelMeas'],
     "filtersType": ['bandpassFilter', 'bandRejectFilter'],
     "collecInterfMode": ['NET', 'USB', 'COM'],
 }

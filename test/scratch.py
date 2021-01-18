@@ -8,6 +8,9 @@ import numpy as np
 from value import respath
 
 
+def test_set_radar():
+    pass
+
 
 def test_load_radar_file():
     a = toolsradarcas.loadFile("radarMocks512.pkl")
@@ -23,7 +26,7 @@ def test_save_gps_file():
     a.connect()
     data = a.recv(recLineNum=9 * 10)
     a.disconnect()
-    fname = toolsradarcas.saveDataPickle(data, instType='gps')
+    fname = toolsradarcas.save_data_pickle(data, instType='gps')
     return fname
 
 

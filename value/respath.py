@@ -6,5 +6,6 @@ RADAR_CONFIG_ICON = "res/png-0011.png"
 SYSTEM_CONFIG_ICON = "res/png-0011.png"
 MESWHELL_CONFIG_ICON = "res/png-0011.png"
 PATH_CONFIG_ICON = "res/png-0057.png"
+PROGRAM_ICON = "res/wave.jpg"
 
 DEFAULT_DATA_NAME = "F:/RadarCAS/data/"
