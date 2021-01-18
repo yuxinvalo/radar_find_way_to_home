@@ -43,29 +43,17 @@ def basic_radar_config():
         "sampleNum": 1024,
         "sampleFreq": 10.5,
         "bscanRefreshInterval": 300,  # Refresh view per 100 line data
-        "receiveFreq": 0.05,  # Unit: second
+        "receiveFreq": 0.02,  # Unit: second
         "calculateFreq": 0.1,
         "patchSize": 416,
         "priorMapInterval": 5,
         "unregisteredMapInterval": 400,
         "firstCutRow": 111,
         "deltaDist": 0.0138,
+        "appendNum": 2,
         "collectionMode": '连续测'
     }
     return basicRadarConfig
-
-
-# def basic_algo_config():
-#     basicAlgoConfig = {
-#         "calculateFreq": 0.1,
-#         "patchSize": 416,
-#         "priorMapInterval": 5,
-#         "unregisteredMapInterval": 400,
-#         "firstCutRow": 111,
-#         "deltaDist": 0.0138,
-#         "maxNPLength": 50000,
-#     }
-#     return basicAlgoConfig
 
 
 def basic_meas_wheel_config():
@@ -78,7 +66,7 @@ def basic_meas_wheel_config():
 
 def basic_gps_config():
     basicGPSConfig = {
-        "receiveFreq": 0.05,
+        "receiveFreq": 0.02,
         "serialNum": 'COM3',
         "baudRate": 9600,
         "parityBit": 'NONE',

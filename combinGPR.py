@@ -122,6 +122,8 @@ class GPRTrace(object):
     def pack_single_GRP_data(self, singleGpsPoints, singleRadarData):
         entitle = self.structure_entitle(singleGpsPoints)
         if type(singleRadarData) == list:
+            if type(singleRadarData[0]) != int:
+                singleRadarData = [int(ele) for ele in singleRadarData]
             singleRadarDataBytes = toolsradarcas.signedInt_2_byte(singleRadarData)
         if len(singleRadarDataBytes) != appconfig.basic_radar_config().get("bytesNum"):
             return errorhandle.PACK_RADAR_DATA_SIZE_ERROR
@@ -150,6 +152,7 @@ class GPRTrace(object):
     @staticmethod
     def load_GPR_data(filepath, samplePoint=512):
         dPosXYZs = []
+        radarData = []
         try:
             file = Path(filepath)
             fileByte = file.stat().st_size
@@ -190,8 +193,9 @@ class GPRTrace(object):
                         usMarkFlag = struct.unpack('H', f.read(2))[0]
 
                         data = struct.unpack(str(samplePoint) + 'h', f.read(samplePoint * 2))
+                        radarData.append(data)
                 dPosXYZs = np.array(dPosXYZs).T
-
+                return dPosXYZ, radarData
             else:
                 return errorhandle.LOAD_GPR_SIZE_ERROR
         except Exception as e:

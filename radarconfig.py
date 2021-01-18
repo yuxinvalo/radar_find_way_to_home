@@ -90,11 +90,22 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.unregisteredMapIntervalEdit.setText(str(self.defaultConf.get("unregisteredMapInterval")))
         self.unregisteredMapIntervalEdit.setValidator(QIntValidator(0, 10000))
 
+        self.appendNum = QtWidgets.QLabel(strs.strings.get("appendNum")[appconfig.language])
+        self.appendNumCombox = QtWidgets.QComboBox(self)
+        currAppendNum = str(self.defaultConf.get("appendNum"))
+        self.appendNumCombox.addItem(currAppendNum)
+        appendNumList = strs.combobox.get("appendNum").copy()
+        appendNumList.remove(currAppendNum)
+        self.appendNumCombox.addItems(appendNumList)
+
         self.collectionMode = QtWidgets.QLabel(strs.strings.get("collectionMode")[appconfig.language])
         self.collectionMode.setObjectName("collectionMode")
         self.collectionModeCombox = QtWidgets.QComboBox(self)
         self.collectionModeCombox.setObjectName("collectionModeCombox")
-        self.collectionModeCombox.addItems(self.translate_combox(self.checkList(strs.combobox.get("collectionMode"))))
+        curColMode = self.defaultConf.get("collectionMode")
+        self.collectionModeCombox.addItem(curColMode)
+        colModeList = strs.combobox.get("collectionMode").copy()
+        self.collectionModeCombox.addItems(self.translate_combox(self.checkList(colModeList)))
 
         self.configLayout.addRow(strs.strings.get("sampleNum")[appconfig.language], self.sampleNumCombox)
         self.configLayout.addRow(strs.strings.get("sampleFreq")[appconfig.language], self.sampleFreqCombox)
@@ -104,6 +115,7 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.configLayout.addRow(strs.strings.get("priorMapInterval")[appconfig.language], self.priorMapIntervalEdit)
         self.configLayout.addRow(strs.strings.get("unregisteredMapInterval")[appconfig.language],
                                  self.unregisteredMapIntervalEdit)
+        self.configLayout.addRow(strs.strings.get("appendNum")[appconfig.language], self.appendNumCombox)
         self.configLayout.addRow(strs.strings.get("collectionMode")[appconfig.language], self.collectionModeCombox)
 
         # PyQt chart
@@ -150,6 +162,7 @@ class RadarConfigurationDialog(ConfigurationDialog):
             "firstCutRow": int(self.firstCutRowEdit.text()),
             "priorMapInterval": int(self.priorMapIntervalEdit.text()),
             "unregisteredMapInterval": int(self.unregisteredMapIntervalEdit.text()),
+            "appendNum": int(self.appendNumCombox.currentText()),
             "collectionMode": self.collectionModeCombox.currentText(),
         }
         return radarSettings

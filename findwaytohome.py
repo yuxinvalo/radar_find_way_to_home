@@ -2,6 +2,8 @@
 # Project:
 # Author: Ni Zhikang, syx10
 # Time 2021/1/4:10:05
+import logging
+
 import pynmea2
 import tensorflow as tf
 
@@ -38,7 +40,7 @@ class FindWayToHome(object):
         unregisteredMapInterval: for the unregistered measurement, set the interval between 2 windows
         deltaDist: the distance between 2 measurements
     """
-    def __init__(self, patchSize, samplePoints, firstCutRow, priorMapInterval, unregisteredMapInterval, deltaDist):
+    def __init__(self, patchSize, samplePoints, firstCutRow, priorMapInterval, unregisteredMapInterval, deltaDist, appendNum):
         super(FindWayToHome, self).__init__()
         self.init_tf()
         self.samplePoints = samplePoints
@@ -47,6 +49,7 @@ class FindWayToHome(object):
         self.priorMapInterval = priorMapInterval
         self.unregisteredMapInterval = unregisteredMapInterval
         self.deltaDist = deltaDist
+        self.appendNum = appendNum
 
         self.init_vars()
 
@@ -61,7 +64,6 @@ class FindWayToHome(object):
         self.files = []  # save feats, gps, radar origin data file path
         self.interval = self.unregisteredMapInterval / self.priorMapInterval
         self.GPStrack = []
-        self.append_num = 2
         self.waitToMatch = []
         self.unregisteredMapPos = []
         self.priorMapPos = []
@@ -77,6 +79,7 @@ class FindWayToHome(object):
         self.priorMapInterval = algoConfig.get("priorMapInterval")
         self.unregisteredMapInterval = algoConfig.get("unregisteredMapInterval")
         self.deltaDist = algoConfig.get("deltaDist")
+        self.appendNum = algoConfig.get("appendNum")
 
     def init_tf(self):
         """
@@ -111,8 +114,6 @@ class FindWayToHome(object):
         self.fill_GPS_data()
 
         # print(singleWindowRadarData.shape)
-        if numWindow < 10:
-            self.windows.append(singleWindowRadarData)
 
         if isClean:
             singleWindowRadarData = RemoveBackground(singleWindowRadarData)
@@ -143,6 +144,8 @@ class FindWayToHome(object):
 
         self.firstDBIndexes.append(numWindow * self.priorMapInterval + self.patchSize - 1)
         image = priorMap[0, :, :]
+        if numWindow < 10:
+            self.windows.append(singleWindowRadarData)
 
         # TF handling==========================================================
         feat_ = pool_feats(self.frcnn.extract_feature(image))
@@ -187,9 +190,20 @@ class FindWayToHome(object):
                 times: 1 means prior measurement, 2 means unregistered measurement
         """
         if times == 1:
-            self.files.append(toolsradarcas.save_data(self.radarData, format='pickle', times=1))
-            self.files.append(toolsradarcas.save_data(self.gpsData, format='pickle', instType='gps', times=1))
-            self.files.append(toolsradarcas.save_data(self.priorFeats, format='pickle', instType='feats', times=1))
+            gprFile = self.combineGPR_data()
+            saveGPR = toolsradarcas.save_data(gprFile, format='GPR', times=1)
+            if type(saveGPR) != int:
+                self.files.append(saveGPR)
+            else:
+                logging.info("Save GPR data exception with error code: " + str(saveGPR))
+
+            featsFile = toolsradarcas.save_data(self.priorFeats, format='pickle', instType='feats', times=1)
+            if type(featsFile) != int:
+                self.files.append(featsFile)
+            else:
+                logging.info("Save feats data exception with error code: " + str(featsFile))
+            # self.files.append(toolsradarcas.save_data(self.radarData, format='pickle', times=1))
+            # self.files.append(toolsradarcas.save_data(self.gpsData, format='pickle', instType='gps', times=1))
             self.files.append(toolsradarcas.save_data(self.windows, format='pickle', instType='windows', times=1))
 
             # Prepare for second measurement
@@ -198,9 +212,17 @@ class FindWayToHome(object):
             self.radarData.clear()
             self.windows.clear()
         else:
-            self.files.append(toolsradarcas.save_data(self.radarData, format='pickle', times=2))
-            self.files.append(
-                toolsradarcas.save_data(self.unregisteredFeats, format='pickle', instType='feats', times=2))
+            radarFile = toolsradarcas.save_data(self.radarData, format='pickle', times=2)
+            if type(radarFile) != int:
+                self.files.append(radarFile)
+            else:
+                logging.error("Save unregistered radar data exception with error code: " + str(radarFile))
+            featsFile = toolsradarcas.save_data(self.unregisteredFeats, format='pickle', instType='feats', times=1)
+            if type(featsFile) != int:
+                self.files.append(featsFile)
+            else:
+                logging.info("Save unregistered feats data exception with error code: " + str(featsFile))
+
             self.files.append(toolsradarcas.save_data(self.windows, format='pickle', instType='windows', times=2))
             self.sythetic_feats()
 
@@ -248,8 +270,8 @@ class FindWayToHome(object):
             print("SECOND====NP add new feat: " + str(self.unregisteredFeats.shape))
 
         self.waitToMatch = []
-        for append_ii in range(self.append_num):  # 如果当前位置不好确定 则需要联合之前的数据
-            assert self.append_num >= 1
+        for append_ii in range(self.appendNum):  # 如果当前位置不好确定 则需要联合之前的数据
+            assert self.appendNum >= 1
             if numWindow - append_ii >= 0:
                 self.waitToMatch.append(self.unregisteredFeats[numWindow - append_ii, :, :])
 
@@ -284,12 +306,21 @@ class FindWayToHome(object):
 
     def combineGPR_data(self):
         """
-        Combin gps and radar data as GPR format
+        Combin gps and radar data as GPR format, make sure that these data length are equal.
         """
+        if len(self.gpsData) > len(self.radarData):
+            self.gpsData = self.gpsData[:len(self.radarData)]
+        if len(self.gpsData) < len(self.radarData):
+            self.radarData = self.radarData[:len(self.gpsData)]
+        if len(self.gpsData) != len(self.radarData):
+            logging.error("GPS data length and radar Data length is different: " +
+                          str(len(self.radarData)) + " | " + str(len(self.gpsData)))
         gprObj = GPRTrace()
-        gpsData = self.gpsNPData.T
-        radarData = self.radarNPData.T
-        gprData = gprObj.pack_GRP_data(gpsData.tolist(), radarData.tolist())
+        gprData = gprObj.pack_GRP_data(self.gpsData, self.radarData)
+        if type(gprData) == int:
+            logging.error("Generate gpr data exeception : " + str(gprData))
+        else:
+            print("GPR DATA LENGTH : " + str(len(gprData)))
         return gprData
 
 

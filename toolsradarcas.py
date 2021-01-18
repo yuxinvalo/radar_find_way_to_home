@@ -110,6 +110,7 @@ def count(data, limit):
 def loadFile(filename=''):
     import pickle
     import numpy as np
+    f = ""
     if not filename:
         return errorhandle.UNKNOWN_FILE_NAME
     elif len(filename.split('/')) > 1:
@@ -129,7 +130,8 @@ def loadFile(filename=''):
     except IOError:
         return errorhandle.LOAD_FILE_IO_ERROR
     finally:
-        f.close()
+        if f:
+            f.close()
 
 
 def list2numpy(data, dataType='byte'):

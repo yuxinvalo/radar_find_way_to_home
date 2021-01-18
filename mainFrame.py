@@ -5,15 +5,17 @@
 
 import logging
 import time
-import csv
 
 import pynmea2
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QFileDialog, QApplication
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from pathlib2 import Path, PureWindowsPath
 import numpy as np
+import ctypes
+import platform
 
 import Tools
 import appconfig
@@ -37,6 +39,7 @@ from wavegraph import WaveGraph
 cleanPlots = []
 reversePlots = []
 
+
 class MainFrame(QtWidgets.QWidget):
     """
     MainFrame contains:
@@ -56,6 +59,7 @@ class MainFrame(QtWidgets.QWidget):
     3. Draw the view
     4. Create the threads and wait for user's instruction
     """
+
     def __init__(self):
         super(MainFrame, self).__init__()
         # Load Config
@@ -64,18 +68,20 @@ class MainFrame(QtWidgets.QWidget):
         self.basicGPSConfig = appconfig.basic_gps_config()
         self.basicMeasWheelConfig = appconfig.basic_meas_wheel_config()
         self.measWheelParams = toolsradarcas.calculate_dist_per_line(self.basicMeasWheelConfig)
-        self.findWayToHome = FindWayToHome(self.basicRadarConfig.get("patchSize"), \
-                                           int(self.basicRadarConfig.get("bytesNum") / 2), \
-                                           int(self.basicRadarConfig.get("firstCutRow")), \
-                                           int(self.basicRadarConfig.get("priorMapInterval")), \
-                                           int(self.basicRadarConfig.get("unregisteredMapInterval")), \
-                                           int(self.basicRadarConfig.get("deltaDist")))
+        self.findWayToHome = FindWayToHome(self.basicRadarConfig.get("patchSize"),
+                                           int(self.basicRadarConfig.get("bytesNum") / 2),
+                                           int(self.basicRadarConfig.get("firstCutRow")),
+                                           int(self.basicRadarConfig.get("priorMapInterval")),
+                                           int(self.basicRadarConfig.get("unregisteredMapInterval")),
+                                           int(self.basicRadarConfig.get("deltaDist")),
+                                           int(self.basicRadarConfig.get("appendNum")))
         self.init_ui()
         self.init_toolbar()
         self.init_chart_panel()
         self.init_state_panel()
         self.set_widgets_enable()
-        self.init_note_perf() # =================FOR DEBUG=======================
+        # self.init_note_perf() # =================FOR DEBUG=======================
+
         # Init threads=================
         self.collectRadarThread = WorkThread(freq=self.basicRadarConfig.get("receiveFreq"))
         self.collectRadarThread.signal_updateUI.connect(self.start_radar_collection_action)
@@ -90,10 +96,14 @@ class MainFrame(QtWidgets.QWidget):
 
     def init_ui(self):
         logging.info("Initializing Main ui...")
+        sys = platform.system()
+        if sys == "Windows":
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(strs.strings.get("appName")[appconfig.language])
         self.mainLayout = QtWidgets.QGridLayout()
         self.mainLayout.setObjectName("mainLayout")
-        self.setGeometry(QtCore.QRect(0, 0, 1100, 1100))
+        self.setGeometry(QtCore.QRect(0, 0, 1100, 900))
         self.setWindowTitle(strs.strings.get("appName")[appconfig.language])
+        self.setWindowIcon(QIcon("./res/wave.jpg"))
         self.directory = appconfig.DEFAULT_SAVE_PATH
         self.setLayout(self.mainLayout)
         self.useWheel = False
@@ -233,13 +243,14 @@ class MainFrame(QtWidgets.QWidget):
         self.statePanel.addWidget(self.counterLabel)
 
         self.priorCounterStrLable = QtWidgets.QLabel(strs.strings.get("priorCounter")[appconfig.language] + ": ")
-        self.priorCounterLable =  QtWidgets.QLabel()
+        self.priorCounterLable = QtWidgets.QLabel()
         self.priorCounterLable.setFont(QtGui.QFont("Times", pointSize=20, weight=QtGui.QFont.Bold))
         self.statePanel.addWidget(self.priorCounterStrLable)
         self.statePanel.addWidget(self.priorCounterLable)
 
-        self.unregisteredCounterStrLable = QtWidgets.QLabel(strs.strings.get("unregisteredCounter")[appconfig.language] + ": ")
-        self.unregisteredCounterLabel =  QtWidgets.QLabel()
+        self.unregisteredCounterStrLable = QtWidgets.QLabel(
+            strs.strings.get("unregisteredCounter")[appconfig.language] + ": ")
+        self.unregisteredCounterLabel = QtWidgets.QLabel()
         self.unregisteredCounterLabel.setFont(QtGui.QFont("Times", pointSize=20, weight=QtGui.QFont.Bold))
         self.statePanel.addWidget(self.unregisteredCounterStrLable)
         self.statePanel.addWidget(self.unregisteredCounterLabel)
@@ -265,7 +276,6 @@ class MainFrame(QtWidgets.QWidget):
         self.counterTimer.timeout.connect(self.counter_data)
         self.counterTimer.start(self.basicRadarConfig.get("receiveFreq") * 100)
 
-
     def init_note_perf(self):
         """
         To test performance of collection and calculate module:
@@ -277,8 +287,8 @@ class MainFrame(QtWidgets.QWidget):
         # self.perf = {self.perfColRadar:[], self.perfColGPS:[], self.perfCal:[], self.drawTime:[]}
         self.perfTrans2NP = "trans"
         self.perfAppendNP = "append"
-        self.perf = {self.perfTrans2NP: [], self.perfAppendNP:[], self.perfColRadar:[], self.perfColGPS:[], self.perfCal:[]}
-
+        self.perf = {self.perfTrans2NP: [], self.perfAppendNP: [], self.perfColRadar: [], self.perfColGPS: [],
+                     self.perfCal: []}
 
     def counter_data(self):
         """
@@ -290,16 +300,19 @@ class MainFrame(QtWidgets.QWidget):
         else:
             self.counterLabel.setText(str(self.counter))
             if self.useWheel and self.isCollecting and self.measTimes == 1:
-                moveDist = round((self.counter * self.measWheelParams[appconfig.DIST_PER_LINE])/100, 4)
+                moveDist = round((self.counter * self.measWheelParams[appconfig.DIST_PER_LINE]) / 100, 4)
                 self.priorMoveDistLabel.setText(str(moveDist) + "m")
             elif self.useWheel and not self.isCollecting and self.priorCounterLable.text().isnumeric() and self.measTimes == 1:
-                moveDist = round((int(self.priorCounterLable.text()) * self.measWheelParams[appconfig.DIST_PER_LINE])/100 , 4)
+                moveDist = round(
+                    (int(self.priorCounterLable.text()) * self.measWheelParams[appconfig.DIST_PER_LINE]) / 100, 4)
                 self.priorMoveDistLabel.setText(str(moveDist) + "m")
             elif self.useWheel and self.isCollecting and self.measTimes == 2:
                 moveDist = round((self.counter * self.measWheelParams[appconfig.DIST_PER_LINE]) / 100, 4)
                 self.unregMoveDistLabel.setText(str(moveDist) + "m")
             elif self.useWheel and not self.isCollecting and self.unregisteredCounterLabel.text().isnumeric() and self.measTimes == 2:
-                moveDist = round((int(self.unregisteredCounterLabel.text()) * self.measWheelParams[appconfig.DIST_PER_LINE]) / 100, 4)
+                moveDist = round(
+                    (int(self.unregisteredCounterLabel.text()) * self.measWheelParams[appconfig.DIST_PER_LINE]) / 100,
+                    4)
                 self.unregMoveDistLabel.setText(str(moveDist) + "m")
 
     def set_widgets_enable(self):
@@ -307,7 +320,6 @@ class MainFrame(QtWidgets.QWidget):
         self.filterConfigBtn.setToolTip("Not implemented.")
         self.sysConfigBtn.setEnabled(False)
         self.sysConfigBtn.setToolTip("Not implemented.")
-
 
     def init_connexion(self):
         """
@@ -403,6 +415,7 @@ class MainFrame(QtWidgets.QWidget):
         self.stopButton.setEnabled(True)
         self.radarConfigBtn.setEnabled(False)
         self.gpsConfigBtn.setEnabled(False)
+        self.measWheelConfigBtn.setEnabled(False)
 
         # Start find way to home Algo==========================
         self.calculateThread.start()
@@ -426,7 +439,7 @@ class MainFrame(QtWidgets.QWidget):
                 GPS, feats is still in memory.
         """
         print("Start calculate", end='==>')
-        caltime = time.clock()
+        # caltime = time.clock()
         if self.measTimes == 1:
             print("Counter : " + str(self.counter) + " Current calculate index:: " + str(
                 self.findWayToHome.patchSize + (self.numWindow * self.basicRadarConfig.get("priorMapInterval"))))
@@ -443,6 +456,7 @@ class MainFrame(QtWidgets.QWidget):
                 self.stopButton.setEnabled(False)
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
+                self.measWheelConfigBtn.setEnabled(True)
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
                 self.drawPicThread.stop()
@@ -456,6 +470,7 @@ class MainFrame(QtWidgets.QWidget):
                 self.stopButton.setEnabled(False)
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
+                self.measWheelConfigBtn.setEnabled(True)
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
                 self.drawPicThread.stop()
@@ -479,6 +494,7 @@ class MainFrame(QtWidgets.QWidget):
                 self.stopButton.setEnabled(False)
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
+                self.measWheelConfigBtn.setEnabled(True)
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
                 self.drawPicThread.stop()
@@ -487,7 +503,6 @@ class MainFrame(QtWidgets.QWidget):
                 self.counter = 0
                 self.numWindow = 0
                 self.findWayToHome.init_vars()
-
 
             elif self.numWindow == 0 and self.isCollecting == False:
                 self.calculateThread.stop()
@@ -498,13 +513,13 @@ class MainFrame(QtWidgets.QWidget):
                 self.stopButton.setEnabled(False)
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
+                self.measWheelConfigBtn.setEnabled(True)
                 self.drawPicThread.stop()
                 self.drawPicThread.isexit = False
                 self.findWayToHome.init_vars()
 
-
         self.lastCounter = self.counter
-        self.perf.get(self.perfCal).append(time.clock() - caltime)
+        # self.perf.get(self.perfCal).append(time.clock() - caltime)
 
     def start_radar_collection_action(self):
         global cleanPlots
@@ -575,12 +590,12 @@ class MainFrame(QtWidgets.QWidget):
                         plots = temp
                 else:
                     if len(self.buffer) + len(plots) == self.basicRadarConfig.get("sampleNum") and \
-                        self.buffer[0:3] == appconfig.RADAR_HEADER:
+                            self.buffer[0:3] == appconfig.RADAR_HEADER:
                         self.buffer.extend(plots)
                         plots = self.buffer
                         self.buffer = []
                     elif len(self.buffer) + len(plots) < self.basicRadarConfig.get("sampleNum") and \
-                        self.buffer[0:3] == appconfig.RADAR_HEADER:
+                            self.buffer[0:3] == appconfig.RADAR_HEADER:
                         self.buffer.extend(plots)
                         return
                     elif self.buffer[0:3] != appconfig.RADAR_HEADER:
@@ -588,61 +603,45 @@ class MainFrame(QtWidgets.QWidget):
                         self.buffer = []
                     else:
                         logging.error("Unexcepted data found: concat length is too long..Just cut it")
-                        self.buffer.extend(plots[:self.basicRadarConfig.get("sampleNum")-len(self.buffer)])
+                        self.buffer.extend(plots[:self.basicRadarConfig.get("sampleNum") - len(self.buffer)])
 
             # =========================================<<<
-            trans = time.clock()
+            # trans = time.clock()
             cleanPlots = toolsradarcas.clean_realtime_data(plots)
-            reversePlots = np.expand_dims(np.asarray(plots).T, axis=1)
-            self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
-            append = time.clock()
-            if self.findWayToHome.radarNPData.shape == (1, 1):
-                self.findWayToHome.radarNPData = reversePlots
-            else:
-                self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
+            self.findWayToHome.radarData.append(plots)
+            # self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
+            # append = time.clock()
 
         else:  # Mock realtime data
-            trans = time.clock()
-            cleanPlots = self.mockData[self.counter].tolist()
-            self.findWayToHome.radarData.append(cleanPlots)
-            # reversePlots = np.expand_dims(np.asarray(cleanPlots).T, axis=1)
-            self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
-            append = time.clock()
-
+            # trans = time.clock()
             if self.counter == len(self.mockData) - 1:
                 logging.info("Mock data length is over....")
                 self.stop_collection_action()
-
-            # if self.findWayToHome.radarNPData.shape == (1, 1):
-            #     self.findWayToHome.radarNPData = reversePlots
-            # else:
-            #     self.findWayToHome.radarNPData = np.append(self.findWayToHome.radarNPData, reversePlots, axis=1)
-            #     if self.findWayToHome.radarNPData.shape[1] == len(self.mockData):
-            #         logging.info("Mock data length is over....")
-            #         self.stop_collection_action()
-            #         return
+                return
+            cleanPlots = self.mockData[self.counter].tolist()
+            self.findWayToHome.radarData.append(cleanPlots)
+            # self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
+            # append = time.clock()
         self.counter += 1
 
         #  ======================Performance===============
-        self.perf.get(self.perfAppendNP).append(time.clock() - append)
+        # self.perf.get(self.perfAppendNP).append(time.clock() - append)
         # self.perf[self.perfColRadar].append(time.clock()-colRadarTime)
-        if len(self.perf[self.perfAppendNP]) % 1000 == 0:
-            res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
-            self.init_note_perf()
+        # if len(self.perf[self.perfAppendNP]) % 1000 == 0:
+        #     res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
+        #     self.init_note_perf()
 
     def draw_pic_action(self):
         global cleanPlots
         self.chartPanel.handle_data(cleanPlots)
-        # if self.findWayToHome.radarNPData.shape != (1,1):
-        #     if self.findWayToHome.radarNPData.shape[1] % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-        #         self.bscanPanel.plot_bscan(self.findWayToHome.radarNPData[:, -1000:-1].T)
-        if self.isCollecting == False and self.counter > 0:
-            self.bscanPanel.plot_bscan(self.findWayToHome.radarData)
-            self.drawPicThread.stop()
-            self.drawPicThread.isexit = False
-            return
+        # if self.isCollecting == False and self.counter > 0:
+        #     self.bscanPanel.plot_bscan(self.findWayToHome.radarData)
+        #     self.drawPicThread.stop()
+        #     self.drawPicThread.isexit = False
+        #     return
         if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-            self.bscanPanel.plot_bscan(self.findWayToHome.radarData[self.basicRadarConfig.get("bscanRefreshInterval")*-1:-1])
+            self.bscanPanel.plot_bscan(
+                self.findWayToHome.radarData[self.basicRadarConfig.get("bscanRefreshInterval") * -1:-1])
 
         QApplication.processEvents()
 
@@ -651,7 +650,7 @@ class MainFrame(QtWidgets.QWidget):
             GPS collector aims to receive GPS serial data,  for each data send back, it will be parsed to GGA/GNS(GPS/beidou)
             format and retrieves latitude, longitude and altitude as a list and save in memory.
         """
-        colGPSTime = time.clock()
+        # colGPSTime = time.clock()
         if self.realTime and self.useGPSCheckBox.isChecked():
             # Rec GPS Data
             if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected:
@@ -672,7 +671,7 @@ class MainFrame(QtWidgets.QWidget):
                 singleGPSCleanData = self.mockGPSData[self.gpsCounter]
                 self.findWayToHome.gpsData.append(singleGPSCleanData)
                 self.gpsCounter += 1
-        self.perf.get(self.perfColGPS).append(time.clock() - colGPSTime)
+        # self.perf.get(self.perfColGPS).append(time.clock() - colGPSTime)
 
     def stop_collection_action(self):
         """
@@ -701,13 +700,7 @@ class MainFrame(QtWidgets.QWidget):
             self.priorCounterLable.setText(str(self.counter))
         else:
             self.unregisteredCounterLabel.setText(str(self.counter))
-        # self.startButton.setEnabled(True)
-        # self.stopButton.setEnabled(False)
-        # self.radarConfigBtn.setEnabled(True)
-        # self.gpsConfigBtn.setEnabled(True)
-        # self.counter = 0
         self.isCollecting = False
-
 
     def gps_config_action(self):
         self.gpsconfView = GPSConfigurationDialog(self.basicGPSConfig)
@@ -732,7 +725,8 @@ class MainFrame(QtWidgets.QWidget):
                 if self.realTime:
                     if self.conn.connected:
                         if self.conn.send(instruments) != 0:
-                            QMessageBoxSample.showDialog(self, "Configurate Radar failed...Please retry!", appconfig.ERROR)
+                            QMessageBoxSample.showDialog(self, "Configurate Radar failed...Please retry!",
+                                                         appconfig.ERROR)
                             return
                     else:
                         if self.conn.connect() == 0:
@@ -749,6 +743,7 @@ class MainFrame(QtWidgets.QWidget):
                 self.basicRadarConfig["firstCutRow"] = res.get("firstCutRow")
                 self.basicRadarConfig["priorMapInterval"] = res.get("priorMapInterval")
                 self.basicRadarConfig["firstCutRow"] = res.get("firstCutRow")
+                self.basicRadarConfig["appendNum"] = res.get("appendNum")
                 self.basicRadarConfig["collectionMode"] = res.get("collectionMode")
                 if self.basicRadarConfig["collectionMode"] in strs.strings.get("wheelMeas"):
                     self.useWheel = True
@@ -838,25 +833,26 @@ class MainFrame(QtWidgets.QWidget):
             self.conn.disconnect()
         # self.gpsConn.disconnect()
 
-
     def load_origin_data(self):
         """
         Just for debug unregistered measurement
         """
-        # self.findWayToHome.radarNPData = toolsradarcas.loadFile("2021_01_11_16_38_17_radar1.pkl")
-        self.findWayToHome.gpsNPData = toolsradarcas.loadFile("2021_01_11_16_38_17_gps1.pkl")
-        self.findWayToHome.priorFeats = toolsradarcas.loadFile("2021_01_11_16_38_17_feats1.pkl")
-        logging.info(self.findWayToHome.radarNPData.shape)
-        logging.info(self.findWayToHome.gpsNPData.shape)
+        from sklearn.preprocessing import normalize
+        self.findWayToHome.radarData = toolsradarcas.loadFile("2021_01_18_09_57_04_radar1.pkl")
+        self.findWayToHome.gpsData = toolsradarcas.loadFile("2021_01_18_09_57_07_gps1.pkl")
+        self.findWayToHome.gpsNPData = np.asarray(self.findWayToHome.gpsData).T
+        self.findWayToHome.priorFeats = toolsradarcas.loadFile("2021_01_18_09_57_07_feats1.pkl")
+        # logging.info(self.findWayToHome.radarNPData.shape)
         logging.info(self.findWayToHome.priorFeats.shape)
         for i in range(self.findWayToHome.priorFeats.shape[0]):
-            self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
-        self.radarNPData = np.zeros((1, 1))
-        self.windows = []
-        self.findWayToHome.files = [1 ,2 ,3]
-        self.findWayToHome.firstDBIndexes = [index for index in np.arange(415, self.findWayToHome.radarNPData.shape[1], 5)]
+            self.findWayToHome.priorFeats[i, :, :] = normalize(self.findWayToHome.priorFeats[i, :, :], axis=1)
+
+        self.findWayToHome.windows = []
+        self.findWayToHome.files = [1, 2, 3]
+        self.findWayToHome.firstDBIndexes = [index for index in np.arange(415, len(self.findWayToHome.radarData), 5)]
+        self.findWayToHome.radarData = []
         logging.info(self.findWayToHome.firstDBIndexes)
-        self.priorCounterLable.setText(str(self.findWayToHome.radarNPData.shape[1]))
+        self.priorCounterLable.setText(str(len(self.findWayToHome.radarData)))
 
 
 class WorkThread(QThread):
