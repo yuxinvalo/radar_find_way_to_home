@@ -5,6 +5,7 @@
 
 import logging
 import os
+import time
 
 import value.strings as strs
 
@@ -28,7 +29,9 @@ def basic_log_config(debug=True):
     if debug:
         logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT, datefmt=DATE_FORMAT)
     else:
-        pass
+        logFilename = './logs/' + time.strftime("%Y_%m_%d", time.localtime()) + '.log'
+        logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, datefmt=DATE_FORMAT, filename=logFilename,
+                    filemode='a')
 
 
 def basic_radar_config():
@@ -66,7 +69,7 @@ def basic_meas_wheel_config():
 
 def basic_gps_config():
     basicGPSConfig = {
-        "receiveFreq": 0.02,
+        "receiveFreq": 1,
         "serialNum": 'COM3',
         "baudRate": 9600,
         "parityBit": 'NONE',

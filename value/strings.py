@@ -62,6 +62,7 @@ strings = {
     "firstCutRow": ['裁剪起始坐标', 'Fist Cut Row'],
     "priorMapInterval": ['第一次裁剪间隔', 'Prior Map Interval'],
     "unregisteredMapInterval": ['第二次裁剪间隔', 'Unregistered Map Interval'],
+    "appendNum": ['特征对比数', 'Feat number to compare'],
 
     "constGain": ['固定增益', 'Const. Gain'],
     "continMeas": ['连续测', 'Continuous Meas.'],
@@ -102,7 +103,7 @@ combobox = {
     "sampleNum": ['512', '1024', '2048'],
     "sampleFreq": ['10.5GHz', '5.25GHz', '21.0GHz'],
     "gainMode": ['constGain', 'others'],
-    "accumTime": ['1', '2', '3', '4'],
+    "appendNum": ['1', '2', '3', '4'],
     "measureAccuracy": ['1cm', '2cm', '3cm'],
     "trigMode": ['trigByCollec', 'others'],
     "collectionMode": ['continMeas', 'wheelMeas'],

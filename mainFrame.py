@@ -98,12 +98,13 @@ class MainFrame(QtWidgets.QWidget):
         logging.info("Initializing Main ui...")
         sys = platform.system()
         if sys == "Windows":
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(strs.strings.get("appName")[appconfig.language])
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                strs.strings.get("appName")[appconfig.language])
         self.mainLayout = QtWidgets.QGridLayout()
         self.mainLayout.setObjectName("mainLayout")
         self.setGeometry(QtCore.QRect(0, 0, 1100, 900))
         self.setWindowTitle(strs.strings.get("appName")[appconfig.language])
-        self.setWindowIcon(QIcon("./res/wave.jpg"))
+        self.setWindowIcon(QIcon(respath.PROGRAM_ICON))
         self.directory = appconfig.DEFAULT_SAVE_PATH
         self.setLayout(self.mainLayout)
         self.useWheel = False
@@ -330,11 +331,13 @@ class MainFrame(QtWidgets.QWidget):
         """
         if not self.conn.connected:
             if self.conn.reconnect() == errorhandle.CONNECT_ERROR:
-                QMessageBoxSample.showDialog(self, "Error occur! check logs...", appconfig.ERROR)
+                logging.error("Send information to GPS exception with code: " + errorhandle.CONNECT_ERROR)
+                QMessageBoxSample.showDialog(self, "Error occur! Connect to GPS failed!", appconfig.ERROR)
                 return errorhandle.CONNECT_ERROR
         instructStart = toolsradarcas.hex_Instruction_2_bytes(appconfig.basic_instruct_config().get("start"))
         sendRes = self.conn.send(instructStart)
         if sendRes != 0:
+            logging.error("Send information to GPS exception with code: " + str(sendRes))
             QMessageBoxSample.showDialog(self, "Error occur! check logs...", appconfig.ERROR)
             self.startButton.setEnabled(True)
             self.stopButton.setEnabled(False)
@@ -342,7 +345,8 @@ class MainFrame(QtWidgets.QWidget):
 
         if self.basicGPSConfig.get("useGPS") and not self.gpsconfView.gpsConn.conn.isOpen():
             if self.gpsconfView.gpsConn.reconnect() != 0:
-                QMessageBoxSample.showDialog(self, "Cant connect to GPS, deactivate GPS collection!")
+                logging.error("User connect to GPS failed...")
+                QMessageBoxSample.showDialog(self, "Cant connect to GPS, deactivate GPS collection!", appconfig.ERROR)
                 self.basicGPSConfig["useGPS"] = False
                 return errorhandle.GPS_CONNECT_FAILURE
         return 0
@@ -357,7 +361,7 @@ class MainFrame(QtWidgets.QWidget):
             3.  While 2 and 3 is right configured, the collections thread will start to work. And the configuration buttons
                 deactivate.
         """
-        logging.info("Start thread...")
+        logging.info("Before starting thread...")
         v = MeasTimesConfigDialog()
         if v.exec_():
             res = v.get_data()[0]
@@ -384,10 +388,18 @@ class MainFrame(QtWidgets.QWidget):
         if self.realTime:
             if self.init_connexion() != 0:
                 return
-            if not self.useGPSCheckBox.isChecked():
-                self.mockGPSData = Tools.GPRGPSReader(Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_4.GPR'))).T
-                logging.info("Mock GPS DATA Length: " + str(len(self.mockGPSData)))
-                self.gpsCounter = 0
+            if not self.useGPSCheckBox.isChecked() and self.measTimes == 1:
+                QMessageBoxSample.showDialog(self, "You don't use GPS, the mocked GPS data will be used!",
+                                             appconfig.INFO)
+                try:
+                    self.mockGPSData = Tools.GPRGPSReader(
+                        Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_4.GPR'))).T
+                    logging.info("Mock GPS DATA Length: " + str(len(self.mockGPSData)))
+                    self.gpsCounter = 0
+                except:
+                    QMessageBoxSample.showDialog(self, "GPS data file: F:/20201219_GPS/500M/CAS_S500Y_4.GPR no found.",
+                                                 appconfig.ERROR)
+                    return
         else:  # Mock Real Time Data In
             self.gpsCounter = 0
 
@@ -403,14 +415,18 @@ class MainFrame(QtWidgets.QWidget):
                 self.mockData = toolsradarcas.bin2mat_transform2(
                     Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_5.bin')))
             # =============================================================
+        if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected and self.measTimes == 1:
+            res = self.check_GPS_located()
+            if res == 0:
+                self.collectGPSThread.start()
+            else:
+                return
+        if self.realTime and not self.basicRadarConfig.get("useGPS") and self.measTimes == 1:
+            self.collectGPSThread.start()
 
         self.isCollecting = True
         self.collectRadarThread.start()
         self.drawPicThread.start()
-        if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected and self.measTimes == 1:
-            self.collectGPSThread.start()
-        if self.realTime and not self.basicRadarConfig.get("useGPS") and self.measTimes == 1:
-            self.collectGPSThread.start()
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(True)
         self.radarConfigBtn.setEnabled(False)
@@ -653,8 +669,8 @@ class MainFrame(QtWidgets.QWidget):
         # colGPSTime = time.clock()
         if self.realTime and self.useGPSCheckBox.isChecked():
             # Rec GPS Data
-            if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected:
-                gga, rawGPSData = self.gpsconfView.gpsConn.recv(1)
+            if self.basicGPSConfig.get("useGPS") and self.isGPSConnected:
+                gga, rawGPSData = self.gpsConn.recv(1)
                 try:
                     ggaObj = pynmea2.parse(gga)
                     gga = [ggaObj.lat, ggaObj.lon, ggaObj.altitude]
@@ -805,13 +821,36 @@ class MainFrame(QtWidgets.QWidget):
             self.gpsConn = GPSConnexion(self.basicGPSConfig)
             if self.gpsConn.connect() == 0:
                 self.isGPSConnected = True
-                QMessageBoxSample.showDialog(self, "GPS is connected!", appconfig.INFO)
-                # gpsRealTimeData = self.gpsConn.recv(recLineNum=1)
-                # self.gpsConn.disconnect()
+                logging.info("GPS is connected!")
+                # QMessageBoxSample.showDialog(self, "GPS is connected!", appconfig.INFO)
             else:
                 self.isGPSConnected = False
                 self.useGPSCheckBox.setChecked(False)
-                QMessageBoxSample.showDialog(self, "Failed to connect GPS!", appconfig.ERROR)
+                logging.info("Unable to connect GPS!")
+                # QMessageBoxSample.showDialog(self, "Failed to connect GPS!", appconfig.ERROR)
+
+    def check_GPS_located(self):
+        maxTry = 3
+        index = 0
+        while True:
+            gga, rawGPSData = self.gpsConn.recv(1)
+            ggaObj = pynmea2.parse(gga)
+            if ggaObj.lat > 0 and ggaObj.lon > 0:
+                logging.info("GPS is located!")
+                return 0
+            else:
+                logging.warning("GPS is not located, can not start the measurement!")
+                if index < maxTry:
+                    self.gpsConn.disconnect()
+                    time.sleep(1)
+                    self.gpsConn.reconnect()
+                else:
+                    logging.error("Can not located GPS, can not start the measurement, please retry...")
+                    QMessageBoxSample.showDialog(self, "Can not located GPS, can not start the measurement, "
+                                                       "please retry after a while...", appconfig.ERROR)
+                    return errorhandle.GPS_NOT_LOCATED
+                index = index + 1
+
 
     def use_mock_data(self):
         if self.useMockCheckBox.isChecked():
