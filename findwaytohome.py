@@ -3,9 +3,10 @@
 # Author: Ni Zhikang, syx10
 # Time 2021/1/4:10:05
 import logging
+import time
 
 import pynmea2
-# import tensorflow as tf
+import tensorflow as tf
 
 import errorhandle
 import toolsradarcas
@@ -23,9 +24,9 @@ GPS_FILE_INDEX = 1
 FEATS_FILE_INDEX = 2
 
 
-# def tf_config():
-#     config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
-#     sess = tf.Session(config=config)
+def tf_config():
+    config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
+    sess = tf.Session(config=config)
 
 
 class FindWayToHome(object):
@@ -42,7 +43,7 @@ class FindWayToHome(object):
     """
     def __init__(self, patchSize, samplePoints, firstCutRow, priorMapInterval, unregisteredMapInterval, deltaDist, appendNum):
         super(FindWayToHome, self).__init__()
-        # self.init_tf()
+        self.init_tf()
         self.samplePoints = samplePoints
         self.patchSize = patchSize  # 第一次测量时选择的切片道数 默认416， 可在雷达设置里改
         self.firstCutRow = firstCutRow
@@ -81,13 +82,13 @@ class FindWayToHome(object):
         self.deltaDist = algoConfig.get("deltaDist")
         self.appendNum = algoConfig.get("appendNum")
 
-    # def init_tf(self):
-    #     """
-    #         Initializing the tensorflow backend
-    #     """
-    #     from myfrcnn_img_retrieve_for_c import myFRCNN_img_retrieve
-    #     tf_config()
-    #     self.frcnn = myFRCNN_img_retrieve()
+    def init_tf(self):
+        """
+            Initializing the tensorflow backend
+        """
+        from myfrcnn_img_retrieve_for_c import myFRCNN_img_retrieve
+        tf_config()
+        self.frcnn = myFRCNN_img_retrieve()
 
     def prior_find_way(self, numWindow, isClean=False, endGaindB=18, moveMode=ALLER_RETOUR):
         """
@@ -147,14 +148,14 @@ class FindWayToHome(object):
         #     self.windows.append(singleWindowRadarData)
 
         # TF handling
-        # feat_ = pool_feats(self.frcnn.extract_feature(image))
-        # feat_ = np.expand_dims(feat_, axis=0)
-        #
-        # if numWindow == 0:
-        #     self.priorFeats = feat_
-        # else:
-        #     self.priorFeats = np.append(self.priorFeats, feat_, axis=0)
-        #     print("FIRST====NP add new feat: " + str(self.priorFeats.shape))
+        feat_ = pool_feats(self.frcnn.extract_feature(image))
+        feat_ = np.expand_dims(feat_, axis=0)
+
+        if numWindow == 0:
+            self.priorFeats = feat_
+        else:
+            self.priorFeats = np.append(self.priorFeats, feat_, axis=0)
+            print("FIRST====NP add new feat: " + str(self.priorFeats.shape))
 
     def fill_GPS_data(self):
         """
@@ -179,25 +180,25 @@ class FindWayToHome(object):
                 times: 1 means prior measurement, 2 means unregistered measurement
         """
         if times == 1:
-            # gprFile = self.combineGPR_data()
-            # saveGPR = toolsradarcas.save_data(gprFile, format='GPR', times=1)
-            # if type(saveGPR) != int:
-            #     self.files.append(saveGPR)
-            # else:
-            #     logging.info("Save GPR data exception with error code: " + str(saveGPR))
+            gprFile = self.combineGPR_data()
+            saveGPR = toolsradarcas.save_data(gprFile, format='GPR', times=1)
+            if type(saveGPR) != int:
+                self.files.append(saveGPR)
+            else:
+                logging.info("Save GPR data exception with error code: " + str(saveGPR))
 
-            # featsFile = toolsradarcas.save_data(self.priorFeats, format='pickle', instType='feats', times=1)
-            # if type(featsFile) != int:
-            #     self.files.append(featsFile)
-            # else:
-            #     logging.info("Save feats data exception with error code: " + str(featsFile))
-            self.files.append(toolsradarcas.save_data(self.radarData, format='pickle', times=1))
-            self.files.append(toolsradarcas.save_data(self.gpsData, format='pickle', instType='gps', times=1))
+            featsFile = toolsradarcas.save_data(self.priorFeats, format='pickle', instType='feats', times=1)
+            if type(featsFile) != int:
+                self.files.append(featsFile)
+            else:
+                logging.info("Save feats data exception with error code: " + str(featsFile))
+            # self.files.append(toolsradarcas.save_data(self.radarData, format='pickle', times=1))
+            # self.files.append(toolsradarcas.save_data(self.gpsData, format='pickle', instType='gps', times=1))
             # self.files.append(toolsradarcas.save_data(self.windows, format='pickle', instType='windows', times=1))
 
             # Prepare for second measurement
-            # for i in range(self.priorFeats.shape[0]):
-            #     self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
+            for i in range(self.priorFeats.shape[0]):
+                self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
             self.radarData.clear()
             self.windows.clear()
         else:
@@ -207,14 +208,14 @@ class FindWayToHome(object):
             else:
                 logging.error("Save unregistered radar data exception with error code: " + str(radarFile))
 
-            # featsFile = toolsradarcas.save_data(self.unregisteredFeats, format='pickle', instType='feats', times=1)
-            # if type(featsFile) != int:
-            #     self.files.append(featsFile)
-            # else:
-            #     logging.info("Save unregistered feats data exception with error code: " + str(featsFile))
+            featsFile = toolsradarcas.save_data(self.unregisteredFeats, format='pickle', instType='feats', times=1)
+            if type(featsFile) != int:
+                self.files.append(featsFile)
+            else:
+                logging.info("Save unregistered feats data exception with error code: " + str(featsFile))
 
             # self.files.append(toolsradarcas.save_data(self.windows, format='pickle', instType='windows', times=2))
-            # self.sythetic_feats()
+            self.sythetic_feats()
 
     def unregistered_find_way(self, numWindow, isClean=False, endGaindB=18):
         """
@@ -248,31 +249,31 @@ class FindWayToHome(object):
 
         image = unregisteredMap[0, :, :]
 
-        # feat_ = pool_feats(self.frcnn.extract_feature(image))
-        # feat_ = normalize(feat_, axis=1)
-        # feat_ = np.expand_dims(feat_, axis=0)
+        feat_ = pool_feats(self.frcnn.extract_feature(image))
+        feat_ = normalize(feat_, axis=1)
+        feat_ = np.expand_dims(feat_, axis=0)
 
-        # if numWindow == 0:
-        #     self.unregisteredFeats = feat_
-        # else:
-        #     self.unregisteredFeats = np.append(self.unregisteredFeats, feat_, axis=0)
-        #     print("SECOND====NP add new feat: " + str(self.unregisteredFeats.shape))
-        #
-        # self.waitToMatch = []
-        # for append_ii in range(self.append_num):  # 如果当前位置不好确定 则需要联合之前的数据
-        #     assert self.append_num >= 1
-        #     if numWindow - append_ii >= 0:
-        #         self.waitToMatch.append(self.unregisteredFeats[numWindow - append_ii, :, :])
+        if numWindow == 0:
+            self.unregisteredFeats = feat_
+        else:
+            self.unregisteredFeats = np.append(self.unregisteredFeats, feat_, axis=0)
+            print("SECOND====NP add new feat: " + str(self.unregisteredFeats.shape))
+
+        self.waitToMatch = []
+        for append_ii in range(self.appendNum):  # 如果当前位置不好确定 则需要联合之前的数据
+            assert self.appendNum >= 1
+            if numWindow - append_ii >= 0:
+                self.waitToMatch.append(self.unregisteredFeats[numWindow - append_ii, :, :])
 
         # Search feat from prior databases
-        # matchIndex, minMAD = Search(np.array(self.waitToMatch), self.priorFeats, self.interval)
-        # print("Find match Index, minMAD: " + str(matchIndex) + " | " + str(minMAD))
+        matchIndex, minMAD = Search(np.array(self.waitToMatch), self.priorFeats, self.interval)
+        print("Find match Index, minMAD: " + str(matchIndex) + " | " + str(minMAD))
 
-        # locate_GPS = MapIndex2GPS(self.firstDBIndexes[matchIndex],
-        #                           self.gpsNPData)
-        # self.GPStrack.append(locate_GPS)
-        # self.unregisteredMapPos.append(self.secondDBIndexes[numWindow])
-        # self.priorMapPos.append(self.firstDBIndexes[matchIndex])
+        locate_GPS = MapIndex2GPS(self.firstDBIndexes[matchIndex],
+                                  self.gpsNPData)
+        self.GPStrack.append(locate_GPS)
+        self.unregisteredMapPos.append(self.secondDBIndexes[numWindow])
+        self.priorMapPos.append(self.firstDBIndexes[matchIndex])
 
     def sythetic_feats(self):
         """
@@ -304,8 +305,8 @@ class FindWayToHome(object):
         if len(self.gpsData) != len(self.radarData):
             logging.error("GPS data length and radar Data length is different: " +
                           str(len(self.radarData)) + " | " + str(len(self.gpsData)))
-        gprObj = GPRTrace()
-        gprData = gprObj.pack_GRP_data(self.gpsData, self.radarData)
+        gprObj = GPRTrace(self.samplePoints)
+        gprData = gprObj.pack_GPR_data(self.gpsData, self.radarData)
         if type(gprData) == int:
             logging.error("Generate gpr data exeception : " + str(gprData))
         else:

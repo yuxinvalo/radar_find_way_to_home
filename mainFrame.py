@@ -29,6 +29,7 @@ from dialogmsgbox import QMessageBoxSample
 from filtersconfig import FiltersConfigurationDialog
 from findwaytohome import FindWayToHome
 from gpsconfig import GPSConfigurationDialog
+from gpsgraph import GPSGraph
 from meastimeconfig import MeasTimesConfigDialog
 from measurementwheelconfig import MeasurementWheelConfigurationDialog
 from radarconfig import RadarConfigurationDialog, build_instruments
@@ -91,6 +92,8 @@ class MainFrame(QtWidgets.QWidget):
         self.calculateThread.signal_updateUI.connect(self.start_calculate_action)
         self.drawPicThread = WorkThread(freq=self.basicRadarConfig.get("receiveFreq"))
         self.drawPicThread.signal_updateUI.connect(self.draw_pic_action)
+        # self.mergeGPRThread = WorkThread(freq=self.basicRadarConfig.get("mergeGPRFreq"))
+        # self.mergeGPRThread.signal_updateUI.connect(self.merge_GPR_action)
 
         self.conn = WirelessConnexion(self.basicRadarConfig)
 
@@ -110,6 +113,7 @@ class MainFrame(QtWidgets.QWidget):
         self.useWheel = False
         self.isCollecting = False
         self.buffer = []
+        self.gpsTraceTemp = 0
 
         # Vars for debugging
         self.isLoadFirstData = False
@@ -217,8 +221,8 @@ class MainFrame(QtWidgets.QWidget):
         self.toolbar.addWidget(self.filterConfigBtn)
         self.toolbar.addWidget(self.pathButton)
         self.toolbar.addLayout(self.checkBoxLayout)
-        self.mainLayout.addWidget(self.pathLabel, 0, 0, 1, 2)
-        self.mainLayout.addWidget(configGroupBox, 1, 0, 1, 2)
+        self.mainLayout.addWidget(self.pathLabel, 0, 0, 1, 3)
+        self.mainLayout.addWidget(configGroupBox, 1, 0, 1, 3)
 
     def init_chart_panel(self):
         logging.info("Initializing chart panels...")
@@ -233,6 +237,13 @@ class MainFrame(QtWidgets.QWidget):
         self.mainLayout.addWidget(self.chartPanel, 3, 1, 1, 1)
         self.mainLayout.setColumnStretch(0, 2)
         self.mainLayout.setColumnStretch(1, 1)
+        self.init_gps_panel()
+
+    def init_gps_panel(self):
+        self.gpsPanel = GPSGraph(self, width=4, height=4, dpi=100)
+        # self.gpsToolbar = NavigationToolbar(self.gpsPanel, self)
+        # self.mainLayout.addWidget(self.gpsToolbar, 2, 2, 1, 1)
+        self.mainLayout.addWidget(self.gpsPanel, 3, 2, 1, 1)
 
     def init_state_panel(self):
         logging.info("Initializing status panel in the bottom....")
@@ -272,7 +283,7 @@ class MainFrame(QtWidgets.QWidget):
         self.statePanel.addWidget(self.unregMoveDistStrLabel)
         self.statePanel.addWidget(self.unregMoveDistLabel)
 
-        self.mainLayout.addLayout(self.statePanel, 4, 0, 1, 2)
+        self.mainLayout.addLayout(self.statePanel, 4, 0, 1, 3)
         self.counterTimer = QtCore.QTimer(self)
         self.counterTimer.timeout.connect(self.counter_data)
         self.counterTimer.start(self.basicRadarConfig.get("receiveFreq") * 100)
@@ -353,15 +364,6 @@ class MainFrame(QtWidgets.QWidget):
                 res = self.check_GPS_located()
                 if res != 0:
                     return errorhandle.GPS_NOT_LOCATED
-            # self.check_GPS_connect()
-            # if self.isGPSConnected:
-            #     res = self.check_GPS_located()
-            #     if res != 0:
-            #         return errorhandle.GPS_NOT_LOCATED
-            # else:
-            #     QMessageBoxSample.showDialog(self, "Failed to connect GPS!")
-            #     self.basicGPSConfig["useGPS"] = False
-            #     return errorhandle.GPS_CONNECT_FAILURE
         return 0
 
     def before_start_collection(self):
@@ -418,6 +420,9 @@ class MainFrame(QtWidgets.QWidget):
 
             # Mock by Ni data===========================================
             if self.measTimes == 1:
+                # logging.info("Clear GPS panel points...")
+                # self.gpsPanel.close()
+                # self.init_gps_panel()
                 # Reverse matrix because of real time radar data format
                 self.mockData = toolsradarcas.bin2mat_transform(
                     Path(PureWindowsPath(r'F:/20201219_GPS/500M/CAS_S500Y_4.bin')))
@@ -669,7 +674,16 @@ class MainFrame(QtWidgets.QWidget):
         if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
             self.bscanPanel.plot_bscan(
                 self.findWayToHome.radarData[self.basicRadarConfig.get("bscanRefreshInterval") * -1:-1])
-
+        try:
+            if len(self.findWayToHome.gpsData) % self.basicGPSConfig.get("gpsGraphRefreshInterval") == 0 \
+                    and self.measTimes == 1:
+                if len(self.findWayToHome.gpsData) > 0:  # Sometimes thread stop after initializing gpsData
+                    self.gpsPanel.scatter_gps_points(self.findWayToHome.gpsData[-1], 1)
+            elif self.measTimes == 2 and len(self.findWayToHome.GPStrack) > self.gpsTraceTemp:
+                self.gpsPanel.scatter_gps_points(self.findWayToHome.GPStrack[-1], 2)
+                self.gpsTraceTemp = len(self.findWayToHome.GPStrack)
+        except Exception as e:
+            print(e)
         QApplication.processEvents()
 
     def start_gps_collection_action(self):
@@ -686,7 +700,7 @@ class MainFrame(QtWidgets.QWidget):
                 try:
                     ggaObj = pynmea2.parse(gga)
                     gga = [ggaObj.latitude, ggaObj.longitude, ggaObj.altitude]
-                    print(gga)
+                    self.gpsPanel.scatter_gps_points(gga[0:2])
                     self.findWayToHome.gpsData.append(gga)
                 except Exception:
                     # TODO: Exception Parse GPS data
@@ -893,7 +907,6 @@ class MainFrame(QtWidgets.QWidget):
                     index = index + 1
         else:
             return errorhandle.GPS_CONNECT_FAILURE
-
 
     def use_mock_data(self):
         if self.useMockCheckBox.isChecked():

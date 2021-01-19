@@ -44,7 +44,7 @@ def basic_radar_config():
         "bytesNum": 2048,
         "sampleNum": 1024,
         "sampleFreq": 10.5,
-        "bscanRefreshInterval": 300,  # Refresh view per 100 line data
+        "bscanRefreshInterval": 500,  # Refresh view per 100 line data
         "receiveFreq": 0.03,  # Unit: second
         "calculateFreq": 0.15,
         "patchSize": 416,
@@ -75,6 +75,7 @@ def basic_gps_config():
         "dataBit": 8,
         "stopBit": 1.0,
         "useGPS": False,
+        "gpsGraphRefreshInterval": 100,
     }
     return basicGPSConfig
 
