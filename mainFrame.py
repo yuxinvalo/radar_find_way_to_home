@@ -544,22 +544,22 @@ class MainFrame(QtWidgets.QWidget):
 
             elif self.numWindow > 0 and self.counter == self.lastCounter and self.isCollecting == False:
                 logging.info("Unregistered Calculate done..")
+                self.calculateThread.stop()
+                self.calculateThread.isexit = False
                 self.startButton.setEnabled(True)
                 self.stopButton.setEnabled(False)
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
                 self.measWheelConfigBtn.setEnabled(True)
-                self.calculateThread.stop()
-                self.calculateThread.isexit = False
                 self.drawGPSThread.stop()
                 self.drawGPSThread.isexit = False
                 self.drawPicThread.stop()
                 self.drawPicThread.isexit = False
-                self.findWayToHome.save_algo_data(2)
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
                 self.maxTryRadar = 3
+                self.findWayToHome.save_algo_data(2)
                 # self.findWayToHome.init_vars()
 
             elif self.numWindow == 0 and self.isCollecting == False:
@@ -768,6 +768,7 @@ class MainFrame(QtWidgets.QWidget):
            will be enabled after all calculate finish.
         """
         logging.info("Stop collection..")
+        self.isCollecting = False
         if self.realTime:
             if not self.conn or not self.conn.connected:
                 QMessageBoxSample.showDialog(self, "Connexion is already down!", appconfig.WARNING)
@@ -787,7 +788,6 @@ class MainFrame(QtWidgets.QWidget):
             self.priorCounterLable.setText(str(self.counter))
         else:
             self.unregisteredCounterLabel.setText(str(self.counter))
-        self.isCollecting = False
 
     def gps_config_action(self):
         self.gpsconfView = GPSConfigurationDialog(self.basicGPSConfig)
@@ -1088,6 +1088,14 @@ class CollectionThread(QThread):
                 time.sleep(self.freq)
             if self.realtime:
                 self.gpsConn.disconnect()
+            logging.info("GPS thread finish..")
+
+    def stop(self):
+        # 改变线程状态与终止
+        self.qmut.lock()
+        self.isexit = True
+        self.qmut.unlock()
+        self.wait()
 
     @property
     def signal_updateUI(self):
