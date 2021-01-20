@@ -87,7 +87,7 @@ class MainFrame(QtWidgets.QWidget):
         # Init threads=================
         self.collectRadarThread = WorkThread(freq=self.basicRadarConfig.get("receiveFreq"))
         self.collectRadarThread.signal_updateUI.connect(self.start_radar_collection_action)
-        self.collectGPSThread = CollectionThread(freq=self.basicGPSConfig.get("receiveFreq"))
+        self.collectGPSThread = WorkThread(freq=self.basicGPSConfig.get("receiveFreq"))
         self.collectGPSThread.signal_updateUI.connect(self.start_gps_collection_action)
         self.calculateThread = WorkThread(freq=self.basicRadarConfig.get("calculateFreq"))
         self.calculateThread.signal_updateUI.connect(self.start_calculate_action)
@@ -335,6 +335,8 @@ class MainFrame(QtWidgets.QWidget):
         self.filterConfigBtn.setToolTip("Not implemented.")
         self.sysConfigBtn.setEnabled(False)
         self.sysConfigBtn.setToolTip("Not implemented.")
+        self.useGPSCheckBox.setEnabled(False)
+        self.useGPSCheckBox.setToolTip("BUG...Not implemented...")
 
     def init_connexion(self):
         """
@@ -445,12 +447,9 @@ class MainFrame(QtWidgets.QWidget):
             # =============================================================
         if self.basicGPSConfig.get("useGPS") and self.gpsconfView.isGPSConnected and self.measTimes == 1:
             logging.info("Start GPS collection in realtime... ")
-            self.collectGPSThread.isOn = True
             self.collectGPSThread.start()
         if self.realTime and not self.basicRadarConfig.get("useGPS") and self.measTimes == 1:
             logging.info("Start GPS collection with mock data... ")
-            self.collectGPSThread.isOn = True
-            self.collectGPSThread.realtime = False
             self.collectGPSThread.start()
 
         self.isCollecting = True
@@ -544,18 +543,19 @@ class MainFrame(QtWidgets.QWidget):
 
             elif self.numWindow > 0 and self.counter == self.lastCounter and self.isCollecting == False:
                 logging.info("Unregistered Calculate done..")
+                self.calculateThread.stop()   # All treads must stop before save action, or Stackoverflow occurs!!
+                self.calculateThread.isexit = False
                 self.startButton.setEnabled(True)
                 self.stopButton.setEnabled(False)
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
                 self.measWheelConfigBtn.setEnabled(True)
-                self.calculateThread.stop()
-                self.calculateThread.isexit = False
                 self.drawGPSThread.stop()
                 self.drawGPSThread.isexit = False
                 self.drawPicThread.stop()
                 self.drawPicThread.isexit = False
                 self.findWayToHome.save_algo_data(2)
+
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
@@ -726,39 +726,20 @@ class MainFrame(QtWidgets.QWidget):
             logging.error("Exception when drawing panel.." + str(e))
         QApplication.processEvents()
 
-    def start_gps_collection_action(self, gga):
+    def start_gps_collection_action(self):
         """
             GPS collector aims to receive GPS serial data,  for each data send back, it will be parsed to GGA/GNS(GPS/beidou)
             format and retrieves latitude, longitude and altitude as a list and save in memory.
             Sometimes GPS may be disconnect, it will try to reconnect GPS serial, if fail to reconnect proceed 
             to 3 times, the program stops auto collecting action.
         """
-        if self.realTime and self.useGPSCheckBox.isChecked():
-            # Rec GPS Data
-            if gga != '':
-                ggaObj = pynmea2.parse(gga)
-                if ggaObj.lat != '' and ggaObj.lon != '':
-                    gga = [float(ggaObj.lat), float(ggaObj.lon), float(ggaObj.altitude)]
-                else:
-                    # TODO: No data found in GPS, real time shoul be inform!
-                    if len(self.findWayToHome.gpsData) == 0: 
-                        ggaObj = pynmea2.parse(toolsradarcas.fill_gga(gga))
-                        gga = [float(ggaObj.lat), float(ggaObj.lon), float(ggaObj.altitude)]
-                    else:
-                        gga = self.findWayToHome.gpsData[-1]
-                    logging.info("Rec gga: " + str(gga))
-                self.findWayToHome.gpsData.append(gga)
-            if type(gga) == int:
-                logging.error("Rec gps data exception with code: " + str(gga))
+        if self.measTimes == 1:
+            if self.gpsCounter == len(self.mockGPSData) - 1:
                 self.stop_collection_action()
-        else:
-            if self.measTimes == 1:
-                if self.gpsCounter == len(self.mockGPSData) - 1:
-                    self.stop_collection_action()
-                    return
-                singleGPSCleanData = self.mockGPSData[self.gpsCounter]
-                self.findWayToHome.gpsData.append(singleGPSCleanData)
-                self.gpsCounter += 1
+                return
+            singleGPSCleanData = self.mockGPSData[self.gpsCounter]
+            self.findWayToHome.gpsData.append(singleGPSCleanData)
+            self.gpsCounter += 1
         # self.perf.get(self.perfColGPS).append(time.clock() - colGPSTime)
 
     def stop_collection_action(self):
@@ -779,8 +760,10 @@ class MainFrame(QtWidgets.QWidget):
 
         self.collectRadarThread.stop()
         self.collectRadarThread.isexit = False
+
         if self.measTimes == 1:
-            self.collectGPSThread.isOn = False
+            self.collectGPSThread.stop()
+            self.collectGPSThread.isexit = False
 
         self.gpsCounter = 0
         if self.measTimes == 1:
@@ -828,7 +811,8 @@ class MainFrame(QtWidgets.QWidget):
                                                              appconfig.ERROR)
                                 return
                         else:
-                            QMessageBoxSample.showDialog(self, "Configurate Radar failed because of connexion...Please retry!",
+                            QMessageBoxSample.showDialog(self,
+                                                         "Configurate Radar failed because of connexion...Please retry!",
                                                          appconfig.ERROR)
                 logging.info("Send configuration to radar: " + str(instruments))
                 self.basicRadarConfig["bytesNum"] = res.get("bytesNum")
@@ -918,7 +902,6 @@ class MainFrame(QtWidgets.QWidget):
             self.gpsConn = GPSConnexion(self.basicGPSConfig)
             if self.gpsConn.connect() == 0:
                 self.isGPSConnected = True
-                self.collectGPSThread.gpsConn = self.gpsConn
                 logging.info("GPS is connected!")
                 res = self.check_GPS_located()
                 if res != 0:
@@ -969,13 +952,11 @@ class MainFrame(QtWidgets.QWidget):
     def use_mock_data(self):
         if self.useMockCheckBox.isChecked():
             self.realTime = False
-            self.collectGPSThread.realtime = self.realTime
             self.findWayToHome.init_vars()
             self.priorCounterLable.setText("0")
             self.unregisteredCounterLabel.setText("0")
         else:
             self.realTime = True
-            self.collectGPSThread.realtime = self.realTime
             self.findWayToHome.init_vars()
             self.priorCounterLable.setText("0")
             self.unregisteredCounterLabel.setText("0")
@@ -1043,51 +1024,6 @@ class WorkThread(QThread):
         self.isexit = True
         self.qmut.unlock()
         self.wait()
-
-    @property
-    def signal_updateUI(self):
-        return self._signal_updateUI
-
-
-class CollectionThread(QThread):
-    """
-    Thread class, it creates a thread and offer ways to control threads.
-        Attributes:
-            freq: Timing interval between 2 invokes
-            isexit: Stop the thread or just make it in waiting status
-    """
-    _signal_updateUI = pyqtSignal(str)
-
-    def __init__(self, parent=None, freq=0.1):
-        super(CollectionThread, self).__init__()
-        self.freq = freq
-        self.setStackSize(10240)
-        self.isOn = True
-        self.gpsConn = ''
-        self.realtime = False
-
-    def run(self):
-        if self.gpsConn == '' and self.realtime:
-            logging.error("no gps connexion config...")
-            self.isOn = False
-        else:
-            while self.isOn:
-                if self.realtime:
-                    line = self.gpsConn.conn.readline()
-                    gga = self.gpsConn.check_GGA_data(line)
-                    if gga != '':
-                        print("Found: " + str(gga))
-                        self._signal_updateUI.emit(str(gga))
-                    elif type(gga) == int:
-                        logging.error("GPS is disconnect..")
-                        self.isOn = False
-                    else:
-                        continue
-                else:
-                    self._signal_updateUI.emit('')
-                time.sleep(self.freq)
-            if self.realtime:
-                self.gpsConn.disconnect()
 
     @property
     def signal_updateUI(self):

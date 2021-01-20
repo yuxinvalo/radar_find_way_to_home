@@ -68,7 +68,7 @@ def basic_meas_wheel_config():
 
 def basic_gps_config():
     basicGPSConfig = {
-        "receiveFreq": 0.05,
+        "receiveFreq": 0.02,
         "serialNum": 'COM7',
         "baudRate": 9600,
         "parityBit": 'NONE',
