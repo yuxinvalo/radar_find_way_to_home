@@ -55,6 +55,7 @@ class FindWayToHome(object):
         self.init_vars()
 
     def init_vars(self):
+        print("Init findwaytohome vars...")
         self.radarData = []
         self.radarNPData = np.zeros((1, 1))  # This will be a numpy format variable
         self.gpsData = []
@@ -89,6 +90,8 @@ class FindWayToHome(object):
         from myfrcnn_img_retrieve_for_c import myFRCNN_img_retrieve
         tf_config()
         self.frcnn = myFRCNN_img_retrieve()
+        mesh = np.zeros((416, 416))
+        self.frcnn.extract_feature(mesh)
 
     def prior_find_way(self, numWindow, isClean=False, endGaindB=18, moveMode=ALLER_RETOUR):
         """
@@ -207,8 +210,7 @@ class FindWayToHome(object):
                 self.files.append(radarFile)
             else:
                 logging.error("Save unregistered radar data exception with error code: " + str(radarFile))
-
-            featsFile = toolsradarcas.save_data(self.unregisteredFeats, format='pickle', instType='feats', times=1)
+            featsFile = toolsradarcas.save_data(self.unregisteredFeats, format='pickle', instType='feats', times=2)
             if type(featsFile) != int:
                 self.files.append(featsFile)
             else:

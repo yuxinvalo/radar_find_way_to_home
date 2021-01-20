@@ -2,6 +2,7 @@
 # Project:
 # Author: syx10
 # Time 2020/12/29:10:54
+import random
 import struct
 import time
 
@@ -30,7 +31,7 @@ def clean_realtime_data(aTuple):
 
 def search_radar_title(aTuple):
     for index, ele in enumerate(aTuple):
-        if ele == 29268 and aTuple[index+1] == 29268 and aTuple[index+2] == 4095:
+        if ele == 29268 and aTuple[index + 1] == 29268 and aTuple[index + 2] == 4095:
             return index
     return -1
 
@@ -176,3 +177,11 @@ def bin2mat_transform2(bin_file, shape_h=1024, order='F'):
     # data = np.fliplr(data[:, -18000:-1])
     # data = data[:, -18000:-1]
     return data.T
+
+
+def fill_gga(gga):
+    latitude = round(3959 + (0.2 * random.random()), 4)
+    longitude = round(11619 + (0.7 * random.random()), 4)
+    altitude = round(50 + random.randint(0, 10) + random.random(), 4)
+    res = gga[0:6] + ",," + str(latitude) + ",," + str(longitude) + ",,,,," + str(altitude) + ",,,,"
+    return res

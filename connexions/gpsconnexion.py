@@ -38,16 +38,15 @@
     $GPGST
     GPS pseudorange statistic
 """
+import logging
 import time
+
+import pynmea2
+import serial
 
 import appconfig
 import errorhandle
-import toolsradarcas
 from connexions.connexion import Connexion
-import serial
-import logging
-
-from value import respath
 
 
 def parseParity(parityBit):
@@ -73,7 +72,7 @@ class GPSConnexion(Connexion):
         self.parityBit = parseParity(configDict.get("parityBit"))
         self.dataBit = configDict.get("dataBit")
         self.stopBit = configDict.get("stopBit")
-        self.maxTry = 3
+        self.maxTry = 1
 
     def connect(self):
         try:
@@ -91,7 +90,7 @@ class GPSConnexion(Connexion):
             return 0
         else:
             for counter in range(0, self.maxTry):
-                time.sleep(0.5)
+                time.sleep(0.2)
                 self.connect()
 
     def disconnect(self):
@@ -108,19 +107,16 @@ class GPSConnexion(Connexion):
         pass
 
     # Receive next GGA
-    def recv(self, recLineNum):
-        ggaData = []
-        rawGPSData = []
-        while True:
+    def recv(self):
+        maxTry = 10
+        while maxTry > 0:
             line = self.conn.readline()
             if len(line) > 0:
-                rawGPSData.append(line)
                 gga = self.check_GGA_data(line)
-                if len(gga) > 0 and recLineNum == 1:
-                    print("GGA" + gga)
-                    return gga, rawGPSData
-                if len(ggaData) > recLineNum:
-                    return ggaData, rawGPSData
+                if len(gga) > 0:
+                    return gga
+            maxTry -= 1
+        return errorhandle.GPS_NO_RETURN_DATA, errorhandle.GPS_NO_RETURN_DATA
 
     # 36 here means ==> '$'
     # And [index:-2] means slice chain from $ to checksum post
@@ -143,7 +139,6 @@ class GPSConnexion(Connexion):
         for index, j in enumerate(gpsLineData):
             if j == 36 and str(gpsLineData[index + 1:index + 6], encoding='utf-8', errors='ignore') in ['GPGGA',
                                                                                                         'GNGGA']:
-                print(gga)
                 gga = str(gpsLineData[index:-2], encoding='utf-8')
 
         return gga
@@ -162,3 +157,34 @@ class GPSConnexion(Connexion):
                         gpsStrData += gga + '\n'
                 continue
         return gpsStrData
+
+
+# index = 0
+# a = GPSConnexion(appconfig.basic_gps_config())
+# if a.connect() == 0:
+#     while True:
+#         print("index : " + str(index))
+#         line = a.conn.readline()
+#         gga = a.check_GGA_data(line)
+#         if gga != '':
+#             print("Found: " + str(gga))
+#         index += 1
+# if a.connect() == 0:
+#     for i in range(0, 7400):
+#         start = time.clock()
+#         gga = a.recv()
+#         print("Rec " + str(gga))
+#         if type(gga) == int:
+#             print("Reconnect ..")
+#             res = a.connect()
+#             if res != 0:
+#                 print("Reconnect falied..")
+#                 break
+#             else:
+#                 gga = a.recv(1)
+#         gga = pynmea2.parse(gga)
+#         print(i, end="：")
+#         print(gga, end=" | ")
+#         print(time.clock() - start)
+#
+#     a.disconnect()
