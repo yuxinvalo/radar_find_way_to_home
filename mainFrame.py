@@ -196,6 +196,7 @@ class MainFrame(QtWidgets.QWidget):
         self.useGPSCheckBox = QtWidgets.QCheckBox()
         self.useGPSCheckBox.setObjectName("useGPS")
         self.useGPSCheckBox.setText(strs.strings.get("useGPS")[appconfig.language])
+        self.useGPSCheckBox.setChecked(self.useGPS)
         self.useGPSCheckBox.toggled.connect(self.check_GPS_connect)
         self.checkBoxLayout.addWidget(self.useGPSCheckBox)
         self.useMockCheckBox = QtWidgets.QCheckBox()
@@ -680,15 +681,15 @@ class MainFrame(QtWidgets.QWidget):
                         plots = temp
                 else:
                     if len(self.buffer) + len(plots) == self.basicRadarConfig.get("sampleNum") and \
-                            self.buffer[0:3] == appconfig.RADAR_HEADER:
+                            self.buffer[0:2] == appconfig.RADAR_HEADER:
                         self.buffer.extend(plots)
                         plots = self.buffer
                         self.buffer = []
                     elif len(self.buffer) + len(plots) < self.basicRadarConfig.get("sampleNum") and \
-                            self.buffer[0:3] == appconfig.RADAR_HEADER:
+                            self.buffer[0:2] == appconfig.RADAR_HEADER:
                         self.buffer.extend(plots)
                         return
-                    elif self.buffer[0:3] != appconfig.RADAR_HEADER:
+                    elif self.buffer[0:2] != appconfig.RADAR_HEADER:
                         logging.error("Buffer is not start with RADAR HEADER, Just ignore it!")
                         self.buffer = []
                     else:
@@ -935,11 +936,21 @@ class MainFrame(QtWidgets.QWidget):
             logging.info("measurement wheel settings has no change.")
 
     def set_mockfile_config_action(self):
-        filtersconf = MockFileConfigurationDialog()
-        if filtersconf.exec_():
-            res = filtersconf.get_data()
-            logging.info("Filters settings is updated to: " + str(res))
-        logging.info("Filters settings has no change.")
+        currMockConfig = {
+            "priorMocks": self.mockRadarPPath,
+            "unregisteredMocks": self.mockRadarRPath,
+            "gpsMocks": self.mockGPSPath
+        }
+        mockfileconf = MockFileConfigurationDialog(currMockConfig)
+        if mockfileconf.exec_():
+            res = mockfileconf.get_data()
+            self.mockRadarPPath = res.get("priorMocks")
+            self.mockRadarRPath = res.get("unregisteredMocks")
+            self.mockGPSPath = res.get("gpsMocks")
+            logging.info("Mocks File settings is updated to: " + str(res))
+        else:
+            logging.error("Mocks File settings failed...")
+        logging.info("Mocks File settings has no change.")
 
     def save_path_action(self):
         logging.info("Choose file saving path")
@@ -1028,7 +1039,10 @@ class MainFrame(QtWidgets.QWidget):
         """
         if self.useRadar and self.conn.connected:
             self.conn.disconnect()
-        # self.gpsConn.disconnect()
+        try:
+            self.findWayToHome.frcnn.close_session()
+        except Exception as e:
+            logging.error("Close tensorflow frcnn failed...Cause by: " + str(e))
 
     def load_origin_data(self):
         """

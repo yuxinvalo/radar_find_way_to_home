@@ -85,7 +85,12 @@ strings = {
     "lowLimitFreq": ['下限频率', 'Low Lmt. Freq.'],
     "upperLimitFreq": ['上限频率', 'Upper Lmt. Freq.'],
     "bandpassFilter": ['通带滤波', 'Bandpass Filter'],
-    "bandRejectFilter": ['带阻滤波', 'Band Rej. Filter']
+    "bandRejectFilter": ['带阻滤波', 'Band Rej. Filter'],
+
+    # MockFile Config
+    "priorMocks": ['Prior模拟数据', 'Prior Mock File'],
+    "unregisteredMocks": ['Unregistered模拟数据', 'Unregistered Mock File'],
+    "gpsMocks": ['GPS模拟数据', 'GPS Mock File'],
 }
 
 combobox = {

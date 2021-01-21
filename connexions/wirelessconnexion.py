@@ -162,14 +162,3 @@ def testConnexion():
         print(len(i))
         print(byte_2_signedInt(i), end="|")
         print(len(byte_2_signedInt(i)))
-
-
-# testConnexion()
-# loadFile()
-
-# for i in b'\xff\x0fh+\xa4\xff\xff\xf3\xfe\xf8\xfe3\xff\x81':
-#     print(i, end=',')
-# barray = b'\xff\x0fh+\xa4\xff\xff\xf3\xfe\xf8\xfe3\xff\x81'
-# count = len(barray)/2
-# integers = struct.unpack('h'*int(count), barray)
-# print(integers)

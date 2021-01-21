@@ -12,3 +12,6 @@ DEFAULT_DATA_NAME = "data/"
 DEFAULT_MOCK_GPS = "data/mocks/CAS_S500Y_4.GPR"
 DEFAULT_MOCK_RADAR_PRIOR = "data/mocks/CAS_S500Y_4.bin"
 DEFAULT_MOCK_RADAR_UNREGISTERED = "data/mocks/CAS_S500Y_5.bin"
+
+DEFAULT_WEIGHT_FILE = "tensorflow/faster-rcnn-keras-master/logs/epoch216-loss0.685-rpn0.265-roi0.420.h5"
+DEFAULT_CLASSES_FILE = "tensorflow/faster-rcnn-keras-master/model_data/myclasses.txt"
