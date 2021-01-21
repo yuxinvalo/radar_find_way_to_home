@@ -179,9 +179,9 @@ def bin2mat_transform2(bin_file, shape_h=1024, order='F'):
     return data.T
 
 
-def fill_gga(gga):
-    latitude = round(3959 + (0.2 * random.random()), 4)
-    longitude = round(11619 + (0.7 * random.random()), 4)
+def fill_gga(gga, index):
+    latitude = round(3959 + (0.2 * random.random() + index * 0.001), 4)
+    longitude = round(11619 + (0.1 * random.random() - index * 0.001), 4)
     altitude = round(50 + random.randint(0, 10) + random.random(), 4)
     res = gga[0:6] + ",," + str(latitude) + ",," + str(longitude) + ",,,,," + str(altitude) + ",,,,"
     return res

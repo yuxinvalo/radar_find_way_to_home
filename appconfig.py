@@ -40,7 +40,7 @@ def basic_radar_config():
         'radarPort': 5050,
         "readTimeOut": 5,
         "writeTimeOut": 3,
-        "maxConnTry": 2,
+        "maxConnTry": 1,
         "bytesNum": 2048,
         "sampleNum": 1024,
         "sampleFreq": 10.5,
@@ -68,7 +68,8 @@ def basic_meas_wheel_config():
 
 def basic_gps_config():
     basicGPSConfig = {
-        "receiveFreq": 0.02,
+        "receiveFreq": 0.1,
+        # "receiveFreq": 0.6,
         "serialNum": 'COM7',
         "baudRate": 9600,
         "parityBit": 'NONE',
