@@ -21,10 +21,13 @@ import math
 #   使用自己训练好的模型预测需要修改2个参数
 #   model_path和classes_path都需要修改！
 # --------------------------------------------#
+from value import respath
+
+
 class myFRCNN_img_retrieve(object):
     _defaults = {
-        "model_path": 'F:/faster-rcnn-keras-master/logs/epoch216-loss0.685-rpn0.265-roi0.420.h5',
-        "classes_path": 'F:/faster-rcnn-keras-master/model_data/myclasses.txt',
+        "model_path": respath.DEFAULT_WEIGHT_FILE,
+        "classes_path": respath.DEFAULT_CLASSES_FILE,
         "confidence": 0.01,
     }
 

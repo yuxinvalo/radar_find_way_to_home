@@ -50,7 +50,7 @@ class WirelessConnexion(Connexion):
                 logging.info("Try to reconnect..." + str(tryTimes))
                 if tryTimes < self.maxConnTry:
                     tryTimes += 1
-                    time.sleep(1)
+                    time.sleep(0.05)
                     continue
                 else:
                     self.connected = False
