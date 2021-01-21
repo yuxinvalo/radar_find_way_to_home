@@ -11,14 +11,14 @@ from configuration import ConfigurationDialog
 import value.strings as strs
 
 
-class FiltersConfigurationDialog(ConfigurationDialog):
+class MockFileConfigurationDialog(ConfigurationDialog):
     def __init__(self):
         super(ConfigurationDialog, self).__init__()
         self.init_ui()
         self.center()
 
     def init_ui(self):
-        self.setWindowTitle(strs.strings.get("filterConfig")[appconfig.language])
+        self.setWindowTitle(strs.strings.get("mockFileConfig")[appconfig.language])
         self.setGeometry(200, 300, 300, 400)
         self.configLayout = QFormLayout()
 

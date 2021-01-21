@@ -8,4 +8,7 @@ MESWHELL_CONFIG_ICON = "res/png-0011.png"
 PATH_CONFIG_ICON = "res/png-0057.png"
 PROGRAM_ICON = "res/wave.jpg"
 
-DEFAULT_DATA_NAME = "F:/RadarCAS/data/"
+DEFAULT_DATA_NAME = "data/"
+DEFAULT_MOCK_GPS = "data/mocks/CAS_S500Y_4.GPR"
+DEFAULT_MOCK_RADAR_PRIOR = "data/mocks/CAS_S500Y_4.bin"
+DEFAULT_MOCK_RADAR_UNREGISTERED = "data/mocks/CAS_S500Y_5.bin"

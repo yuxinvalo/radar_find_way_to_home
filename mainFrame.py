@@ -26,7 +26,7 @@ from bscangraph import BscanGraph
 from connexions.gpsconnexion import GPSConnexion
 from connexions.wirelessconnexion import WirelessConnexion
 from dialogmsgbox import QMessageBoxSample
-from filtersconfig import FiltersConfigurationDialog
+from mockfileconfig import MockFileConfigurationDialog
 from findwaytohome import FindWayToHome
 from gpsconfig import GPSConfigurationDialog
 from gpsgraph import GPSGraph
@@ -86,7 +86,10 @@ class MainFrame(QtWidgets.QWidget):
         # Init threads=================
         self.collectRadarThread = WorkThread(freq=self.basicRadarConfig.get("receiveFreq"))
         self.collectRadarThread.signal_updateUI.connect(self.start_radar_collection_action)
-        self.collectGPSThread = CollectionThread(freq=self.basicGPSConfig.get("receiveFreq"))
+        if self.useGPS:
+            self.collectGPSThread = CollectionThread(freq=self.basicGPSConfig.get("receiveFreq"))
+        else:
+            self.collectGPSThread = CollectionThread(freq=self.basicGPSConfig.get("receiveFreqMock"))
         self.collectGPSThread.signal_updateUI.connect(self.start_gps_collection_action)
         self.calculateThread = WorkThread(freq=self.basicRadarConfig.get("calculateFreq"))
         self.calculateThread.signal_updateUI.connect(self.start_calculate_action)
@@ -117,16 +120,21 @@ class MainFrame(QtWidgets.QWidget):
 
         # Vars for debugging
         self.isLoadFirstData = False
-        self.realTime = False
-        self.errorData = []
+        self.useRadar = False
+        self.useGPS = False
 
         self.counter = 0
+        self.gpsCounter = 0
         self.numWindow = 0
         self.moveMode = 0
         self.measTimes = 0
         self.lastCounter = 0
         self.maxTryGPS = 3
         self.maxTryRadar = 3
+
+        self.mockGPSPath = respath.DEFAULT_MOCK_GPS
+        self.mockRadarPPath = respath.DEFAULT_MOCK_RADAR_PRIOR
+        self.mockRadarRPath = respath.DEFAULT_MOCK_RADAR_UNREGISTERED
 
     def init_toolbar(self):
         logging.info("Initializing toolbar....")
@@ -176,13 +184,13 @@ class MainFrame(QtWidgets.QWidget):
         self.measWheelConfigBtn.setIconSize(QtCore.QSize(50, 50))
         self.measWheelConfigBtn.clicked.connect(self.measwheel_config_action)
 
-        self.filterConfigBtn = QtWidgets.QToolButton()
-        self.filterConfigBtn.setText(strs.strings.get("filterConfig")[appconfig.language])
-        self.filterConfigBtn.setObjectName("filterConfigBtn")
-        self.filterConfigBtn.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
-        self.filterConfigBtn.setIcon(QtGui.QIcon(respath.RADAR_CONFIG_ICON))
-        self.filterConfigBtn.setIconSize(QtCore.QSize(50, 50))
-        self.filterConfigBtn.clicked.connect(self.filters_config_action)
+        self.mockFileConfigBtn = QtWidgets.QToolButton()
+        self.mockFileConfigBtn.setText(strs.strings.get("mockFileConfig")[appconfig.language])
+        self.mockFileConfigBtn.setObjectName("mockFileConfig")
+        self.mockFileConfigBtn.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
+        self.mockFileConfigBtn.setIcon(QtGui.QIcon(respath.RADAR_CONFIG_ICON))
+        self.mockFileConfigBtn.setIconSize(QtCore.QSize(50, 50))
+        self.mockFileConfigBtn.clicked.connect(self.set_mockfile_config_action)
 
         self.checkBoxLayout = QtWidgets.QVBoxLayout()
         self.useGPSCheckBox = QtWidgets.QCheckBox()
@@ -192,7 +200,7 @@ class MainFrame(QtWidgets.QWidget):
         self.checkBoxLayout.addWidget(self.useGPSCheckBox)
         self.useMockCheckBox = QtWidgets.QCheckBox()
         self.useMockCheckBox.setObjectName("useMockData")
-        self.useMockCheckBox.setChecked(not self.realTime)
+        self.useMockCheckBox.setChecked(not self.useRadar)
         self.useMockCheckBox.setText(strs.strings.get("useMockData")[appconfig.language])
         self.useMockCheckBox.toggled.connect(self.use_mock_data)
         self.checkBoxLayout.addWidget(self.useMockCheckBox)
@@ -220,7 +228,7 @@ class MainFrame(QtWidgets.QWidget):
         self.toolbar.addWidget(self.gpsConfigBtn)
         self.toolbar.addWidget(self.measWheelConfigBtn)
         self.toolbar.addWidget(self.sysConfigBtn)
-        self.toolbar.addWidget(self.filterConfigBtn)
+        self.toolbar.addWidget(self.mockFileConfigBtn)
         self.toolbar.addWidget(self.pathButton)
         self.toolbar.addLayout(self.checkBoxLayout)
         self.mainLayout.addWidget(self.pathLabel, 0, 0, 1, 3)
@@ -309,7 +317,7 @@ class MainFrame(QtWidgets.QWidget):
             Counter data number thread will invoke this method to refresh the number
             If user use Wheel to get the distance, it refreshes the distance too
         """
-        if not self.realTime:
+        if not self.useRadar:
             self.counterLabel.setText(str(self.counter))
         else:
             self.counterLabel.setText(str(self.counter))
@@ -330,8 +338,8 @@ class MainFrame(QtWidgets.QWidget):
                 self.unregMoveDistLabel.setText(str(moveDist) + "m")
 
     def set_widgets_enable(self):
-        self.filterConfigBtn.setEnabled(False)
-        self.filterConfigBtn.setToolTip("Not implemented.")
+        # self.filterConfigBtn.setEnabled(False)
+        # self.filterConfigBtn.setToolTip("Not implemented.")
         self.sysConfigBtn.setEnabled(False)
         self.sysConfigBtn.setToolTip("Not implemented.")
 
@@ -356,7 +364,7 @@ class MainFrame(QtWidgets.QWidget):
             self.stopButton.setEnabled(False)
             return errorhandle.SEND_INSTRUCT_ERROR
 
-        if self.basicGPSConfig.get("useGPS") and self.measTimes == 1:
+        if self.useGPS and self.measTimes == 1:
             if self.isGPSConnected and self.gpsConn.conn.isOpen():
                 res = self.check_GPS_located()
                 if res != 0:
@@ -373,10 +381,11 @@ class MainFrame(QtWidgets.QWidget):
             This method will be invoked when user click start.
             1. Select the mode of measurement, Prior or Unregistered, the unregistered mode can not be selected if prior mode
                 hasn't been operated.
-            2. Check connexions of Radar and GPS if use GPS is checked. The threads will not start if connexions failures.
-
-            3.  While 2 and 3 is right configured, the collections thread will start to work. And the configuration buttons
-                deactivate.
+            2. There 4 mode of collector:
+                - Use GPS and use Radar
+                - Use mock GPS and use Radar
+                - Use mock GPS and use mock Radar
+                - Use GPS and use mock Radar
         """
         logging.info("Before starting thread...")
         v = MeasTimesConfigDialog()
@@ -401,60 +410,84 @@ class MainFrame(QtWidgets.QWidget):
         else:
             return
         logging.info("Current calculate mode is: " + str(self.measTimes))
+        self.gpsCounter = 0
+        if self.measTimes == 1:
+            logging.info("Clear GPS panel points and history data in findWayToHome class...")
+            self.gpsPanel.close()
+            self.init_gps_panel()
+            self.findWayToHome.init_vars()
 
-        if self.realTime:
-            if self.measTimes == 1:
-                logging.info("Clear GPS panel points...")
-                self.gpsPanel.close()
-                self.init_gps_panel()
-
-                self.findWayToHome.init_vars()
-
+        if self.useRadar and self.useGPS:
+            logging.info("GPS and Radar all in real time mode!")
             if self.init_connexion() != 0:
                 return
-            if not self.useGPSCheckBox.isChecked() and self.measTimes == 1:
-                QMessageBoxSample.showDialog(self, "You don't use GPS, the mocked GPS data will be used!",
-                                             appconfig.INFO)
-                try:
-                    self.mockGPSData = Tools.GPRGPSReader(
-                        Path(PureWindowsPath(r'data/mocks/CAS_S500Y_4.GPR'))).T
-                    logging.info("Mock GPS DATA Length: " + str(len(self.mockGPSData)))
-                    self.gpsCounter = 0
-                except:
-                    QMessageBoxSample.showDialog(self, "GPS data file: F:/20201219_GPS/500M/CAS_S500Y_4.GPR no found.",
-                                                 appconfig.ERROR)
+
+            if self.isGPSConnected and self.measTimes == 1:
+                logging.info("Prepare GPS collection in realtime... ")
+                self.collectGPSThread.isOn = True
+                self.collectGPSThread.realtime = True
+                self.collectGPSThread.freq = self.basicGPSConfig.get("receiveFreq")
+
+        elif self.useRadar and not self.useGPS:
+            logging.info("Radar is in real time mode, but the mocked GPS data will be used!")
+            try:
+                if self.init_connexion() != 0:
                     return
-        else:  # Mock Real Time Data In
-            self.gpsCounter = 0
-
-            # Mock by Ni data===========================================
-            if self.measTimes == 1:
-                logging.info("Clear GPS panel points...")
-                self.gpsPanel.close()
-                self.init_gps_panel()
-                # Reverse matrix because of real time radar data format
-                self.mockData = toolsradarcas.bin2mat_transform(
-                    Path(PureWindowsPath(r'data/mocks/CAS_S500Y_4.bin')))
-                self.mockGPSData = Tools.GPRGPSReader(Path(PureWindowsPath(r'data/mocks/CAS_S500Y_4.GPR'))).T
+                self.mockGPSData = Tools.GPRGPSReader(
+                    Path(PureWindowsPath(self.mockGPSPath))).T
                 logging.info("Mock GPS DATA Length: " + str(len(self.mockGPSData)))
-                self.collectGPSThread.start()
-            elif self.measTimes == 2:
-                self.mockData = toolsradarcas.bin2mat_transform2(
-                    Path(PureWindowsPath(r'data/mocks/CAS_S500Y_5.bin')))
-            # =============================================================
+                if self.measTimes == 1:
+                    QMessageBoxSample.showDialog(self, "You don't use GPS, the mocked GPS data will be used!",
+                                                 appconfig.INFO)
+                    self.collectGPSThread.isOn = True
+                    self.collectGPSThread.realtime = False
+                    self.collectGPSThread.freq = self.basicGPSConfig.get("receiveFreqMock")
+                self.gpsCounter = 0
+            except Exception as e:
+                QMessageBoxSample.showDialog(self, "Exception Occur： " + str(e),
+                                             appconfig.ERROR)
+                return
 
-        if self.basicGPSConfig.get("useGPS") and self.isGPSConnected and self.measTimes == 1:
-            logging.info("Start GPS collection in realtime... ")
-            self.collectGPSThread.isOn = True
-            self.collectGPSThread.realtime = True
-            self.collectGPSThread.start()
-        if self.realTime and not self.basicGPSConfig.get("useGPS") and self.measTimes == 1:
-            logging.info("Start GPS collection with mock data... ")
-            self.collectGPSThread.isOn = True
-            self.collectGPSThread.realtime = False
-            self.collectGPSThread.start()
+        elif not self.useRadar and self.useGPS:
+            logging.info("GPS is in real time mode, but radar is in mock mode!")
+            try:
+                if self.measTimes == 1:
+                    self.mockData = toolsradarcas.bin2mat_transform(
+                        Path(PureWindowsPath(self.mockRadarPPath)))
+                    if self.isGPSConnected:
+                        self.collectGPSThread.isOn = True
+                        self.collectGPSThread.realtime = True
+                        self.collectGPSThread.freq = self.basicGPSConfig.get("receiveFreq")
+                else:
+                    self.mockData = toolsradarcas.bin2mat_transform(
+                        Path(PureWindowsPath(self.mockRadarRPath)))
+            except Exception as e:
+                QMessageBoxSample.showDialog(self, "Exception Occur： " + str(e),
+                                             appconfig.ERROR)
+                return
+        else:
+            logging.info("Radar and GPS all in mock mode!")
+            try:
+                if self.measTimes == 1:
+                    self.mockData = toolsradarcas.bin2mat_transform(
+                        Path(PureWindowsPath(self.mockRadarPPath)))
+                    self.mockGPSData = Tools.GPRGPSReader(Path(PureWindowsPath(self.mockGPSPath))).T
+                    self.collectGPSThread.isOn = True
+                    self.collectGPSThread.realtime = False
+                    self.collectGPSThread.freq = self.basicGPSConfig.get("receiveFreqMock")
+                else:
+                    self.mockData = toolsradarcas.bin2mat_transform(
+                        Path(PureWindowsPath(self.mockRadarRPath)))
+            except Exception as e:
+                QMessageBoxSample.showDialog(self, "Exception Occur： " + str(e),
+                                             appconfig.ERROR)
+                return
 
         self.isCollecting = True
+        if self.measTimes == 1:
+            logging.info("Start GPS collector....")
+            self.collectGPSThread.start()
+        logging.info("Start radar collector....")
         self.collectRadarThread.start()
         self.drawPicThread.start()
         self.drawGPSThread.start()
@@ -486,7 +519,7 @@ class MainFrame(QtWidgets.QWidget):
                 GPS, feats is still in memory.
         """
         print("Start calculate", end='==>')
-        caltime = time.clock()
+        # caltime = time.clock()
         if self.measTimes == 1:
             print("Counter : " + str(self.counter) + " Current calculate index: " + str(
                 self.findWayToHome.patchSize + (self.numWindow * self.basicRadarConfig.get("priorMapInterval"))))
@@ -499,17 +532,13 @@ class MainFrame(QtWidgets.QWidget):
             elif self.findWayToHome.patchSize + self.numWindow * self.basicRadarConfig.get("priorMapInterval") > \
                     self.counter and self.numWindow > 0 and self.isCollecting == False:
                 logging.info("Prior Calculate done..")
+                self.calculateThread.stop()
+                self.calculateThread.isexit = False
                 self.startButton.setEnabled(True)
                 self.stopButton.setEnabled(False)
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
                 self.measWheelConfigBtn.setEnabled(True)
-                self.calculateThread.stop()
-                self.calculateThread.isexit = False
-                self.drawPicThread.stop()
-                self.drawPicThread.isexit = False
-                self.drawGPSThread.stop()
-                self.drawGPSThread.isexit = False
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
@@ -524,11 +553,6 @@ class MainFrame(QtWidgets.QWidget):
                 self.measWheelConfigBtn.setEnabled(True)
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
-                self.drawPicThread.stop()
-                self.drawPicThread.isexit = False
-                self.drawGPSThread.stop()
-                self.drawGPSThread.isexit = False
-                # self.findWayToHome.init_vars()
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
@@ -543,7 +567,7 @@ class MainFrame(QtWidgets.QWidget):
                 self.findWayToHome.unregistered_find_way(self.numWindow, isClean=False)
                 self.numWindow += 1
 
-            elif self.numWindow > 0 and self.counter == self.lastCounter and self.isCollecting == False:
+            elif self.numWindow > 0 and self.counter == self.lastCounter and not self.isCollecting:
                 logging.info("Unregistered Calculate done..")
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
@@ -552,10 +576,6 @@ class MainFrame(QtWidgets.QWidget):
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
                 self.measWheelConfigBtn.setEnabled(True)
-                self.drawGPSThread.stop()
-                self.drawGPSThread.isexit = False
-                self.drawPicThread.stop()
-                self.drawPicThread.isexit = False
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
@@ -563,7 +583,7 @@ class MainFrame(QtWidgets.QWidget):
                 self.findWayToHome.save_algo_data(2)
                 # self.findWayToHome.init_vars()
 
-            elif self.numWindow == 0 and self.isCollecting == False:
+            elif self.numWindow == 0 and not self.isCollecting:
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
                 self.startButton.setEnabled(True)
@@ -571,23 +591,19 @@ class MainFrame(QtWidgets.QWidget):
                 self.radarConfigBtn.setEnabled(True)
                 self.gpsConfigBtn.setEnabled(True)
                 self.measWheelConfigBtn.setEnabled(True)
-                self.drawPicThread.stop()
-                self.drawPicThread.isexit = False
-                self.drawGPSThread.stop()
-                self.drawGPSThread.isexit = False
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
                 self.maxTryRadar = 3
                 # self.findWayToHome.init_vars()
         self.lastCounter = self.counter
-        self.perf.get(self.perfCal).append(time.clock() - caltime)
+        # self.perf.get(self.perfCal).append(time.clock() - caltime)
 
     def start_radar_collection_action(self):
-        colRadarTime = time.clock()
+        # colRadarTime = time.clock()
         global cleanPlots
         global reversePlots
-        trans = time.clock()
+        # trans = time.clock()
         """
             Radar data collector thread will invoke this method with frequency define at appconfig.py
             There is 2 mode of collection: realtime or not realtime
@@ -598,7 +614,7 @@ class MainFrame(QtWidgets.QWidget):
                 3. Convert bytes data to numpy format
                 4. Append numby data to radarNPData for saving, slicing and calculating.
         """
-        if self.realTime:
+        if self.useRadar:
             bytesData = b''
             if not self.useWheel:
                 # Rec Radar Data
@@ -653,7 +669,8 @@ class MainFrame(QtWidgets.QWidget):
                         return
                 else:
                     logging.error("Unexcepted data found: length is enough but no title found!")
-                    return
+                    logging.info(plots)
+                    # return
             elif title_index != 0 and len(plots) < self.basicRadarConfig.get("sampleNum"):
                 if title_index != -1:
                     if len(self.buffer) + title_index == self.basicRadarConfig.get("sampleNum"):
@@ -681,8 +698,8 @@ class MainFrame(QtWidgets.QWidget):
             # =========================================<<<
 
             cleanPlots = toolsradarcas.clean_realtime_data(plots)
-            self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
-            append = time.clock()
+            # self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
+            # append = time.clock()
             self.findWayToHome.radarData.append(plots)
 
         else:  # Mock realtime data
@@ -698,49 +715,53 @@ class MainFrame(QtWidgets.QWidget):
         self.counter += 1
 
          # ======================Performance===============
-        self.perf.get(self.perfAppendNP).append(time.clock() - append)
-        self.perf[self.perfTrans2NP].append(time.clock()-colRadarTime)
-        if len(self.perf[self.perfAppendNP]) % 1000 == 0:
-            res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
-            print("Save perf file : " + str(res))
-            self.init_note_perf()
+        # self.perf.get(self.perfAppendNP).append(time.clock() - append)
+        # self.perf[self.perfTrans2NP].append(time.clock()-colRadarTime)
+        # if len(self.perf[self.perfAppendNP]) % 1000 == 0:
+        #     res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
+        #     print("Save perf file : " + str(res))
+        #     self.init_note_perf()
 
     def draw_pic_action(self):
         global cleanPlots
-        self.chartPanel.handle_data(cleanPlots)
-        # if self.isCollecting == False and self.counter > 0:
-        #     self.bscanPanel.plot_bscan(self.findWayToHome.radarData)
-        #     self.drawPicThread.stop()
-        #     self.drawPicThread.isexit = False
-        #     return
-        if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
-            self.bscanPanel.plot_bscan(
-                self.findWayToHome.radarData[self.basicRadarConfig.get("bscanRefreshInterval") * -1:-1])
+        if self.isCollecting:
+            self.chartPanel.handle_data(cleanPlots)
+            # if self.isCollecting == False and self.counter > 0:
+            #     self.bscanPanel.plot_bscan(self.findWayToHome.radarData)
+            #     self.drawPicThread.stop()
+            #     self.drawPicThread.isexit = False
+            #     return
+            if len(self.findWayToHome.radarData) % self.basicRadarConfig.get("bscanRefreshInterval") == 0:
+                self.bscanPanel.plot_bscan(
+                    self.findWayToHome.radarData[self.basicRadarConfig.get("bscanRefreshInterval") * -1:-1])
         QApplication.processEvents()
 
     def draw_GPS_action(self):
-        draw = time.clock()
+        # draw = time.clock()
         try:
-            if self.measTimes == 1:
-                if len(self.findWayToHome.gpsData) > 0:  # Sometimes thread stop after initializing gpsData
-                    self.gpsPanel.scatter_gps_points(self.findWayToHome.gpsData[-1], 1)
-            elif self.measTimes == 2 and len(self.findWayToHome.GPStrack) > self.gpsTraceTemp:
-                self.gpsPanel.scatter_gps_points(self.findWayToHome.GPStrack[-1], 2)
-                self.gpsTraceTemp = len(self.findWayToHome.GPStrack)
+            if self.isCollecting:
+                if self.measTimes == 1:
+                    if len(self.findWayToHome.gpsData) > 0:  # Sometimes thread stop after initializing gpsData
+                        self.gpsPanel.scatter_gps_points(self.findWayToHome.gpsData[-1], 1)
+                elif self.measTimes == 2 and len(self.findWayToHome.GPStrack) > self.gpsTraceTemp:
+                    print(len(self.findWayToHome.GPStrack), end=" | ")
+                    print(self.gpsTraceTemp)
+                    self.gpsPanel.scatter_gps_points(self.findWayToHome.GPStrack[-1], 2)
+                    self.gpsTraceTemp = len(self.findWayToHome.GPStrack)
         except Exception as e:
             logging.error("Exception when drawing panel.." + str(e))
         QApplication.processEvents()
-        self.perf[self.drawTime].append(time.clock() - draw)
+        # self.perf[self.drawTime].append(time.clock() - draw)
 
     def start_gps_collection_action(self, gga):
-        colGPSTime = time.clock()
+        # colGPSTime = time.clock()
         """
             GPS collector aims to receive GPS serial data,  for each data send back, it will be parsed to GGA/GNS(GPS/beidou)
             format and retrieves latitude, longitude and altitude as a list and save in memory.
             Sometimes GPS may be disconnect, it will try to reconnect GPS serial, if fail to reconnect proceed 
             to 3 times, the program stops auto collecting action.
         """
-        if self.realTime and self.useGPSCheckBox.isChecked():
+        if self.useGPS:
             # Rec GPS Data
             logging.info("Rec gga: " + str(gga))
             if gga != '':
@@ -764,7 +785,7 @@ class MainFrame(QtWidgets.QWidget):
                 singleGPSCleanData = self.mockGPSData[self.gpsCounter]
                 self.findWayToHome.gpsData.append(singleGPSCleanData)
                 self.gpsCounter += 1
-        self.perf.get(self.perfColGPS).append(time.clock() - colGPSTime)
+        # self.perf.get(self.perfColGPS).append(time.clock() - colGPSTime)
 
     def stop_collection_action(self):
         """
@@ -772,9 +793,28 @@ class MainFrame(QtWidgets.QWidget):
            calculating action is not supposed to stop if the data length is still less than next window index, the buttons
            will be enabled after all calculate finish.
         """
-        logging.info("Stop collection..")
+        logging.info("Stop Radar collection..")
+        self.collectRadarThread.stop()
+        self.collectRadarThread.isexit = False
+
+        if self.measTimes == 1:
+            logging.info("Stop GPS collection..")
+            self.collectGPSThread.stop()
+            self.useGPSCheckBox.setChecked(False)
+            self.useGPS = False
+            self.gpsCounter = 0
+        else:
+            self.gpsTraceTemp = 0  # Set GPS scatter index to 0
         self.isCollecting = False
-        if self.realTime:
+
+        logging.info("Stop Drawing thread...")
+        self.drawPicThread.stop()
+        self.drawPicThread.isexit = False
+        self.drawGPSThread.stop()
+        self.drawGPSThread.isexit = False
+
+        if self.useRadar:
+            logging.info("Send stop instruction to Radar")
             if not self.conn or not self.conn.connected:
                 QMessageBoxSample.showDialog(self, "Connexion is already down!", appconfig.WARNING)
             else:
@@ -783,18 +823,9 @@ class MainFrame(QtWidgets.QWidget):
                     QMessageBoxSample.showDialog(self, "Error occur! check logs...", appconfig.ERROR)
                 self.conn.disconnect()
 
-        self.collectRadarThread.stop()
-        self.collectRadarThread.isexit = False
-        if self.measTimes == 1:
-            self.collectGPSThread.isOn = False
-            self.gpsConn.disconnect()
-            self.useGPSCheckBox.setChecked(False)
-            self.basicRadarConfig["useGPS"] = False
-            self.gpsCounter = 0
-
         if self.measTimes == 1:
             self.priorCounterLable.setText(str(self.counter))
-        else:
+        elif self.measTimes == 2:
             self.unregisteredCounterLabel.setText(str(self.counter))
 
     def gps_config_action(self):
@@ -823,7 +854,7 @@ class MainFrame(QtWidgets.QWidget):
             res = radarconfView.get_data()
             if res:
                 instruments = toolsradarcas.hex_Instruction_2_bytes(build_instruments(res, self.measWheelParams))
-                if self.realTime:
+                if self.useRadar:
                     if self.conn.connected:
                         if self.conn.send(instruments) != 0:
                             QMessageBoxSample.showDialog(self, "Configurate Radar failed...Please retry!",
@@ -903,8 +934,8 @@ class MainFrame(QtWidgets.QWidget):
         else:
             logging.info("measurement wheel settings has no change.")
 
-    def filters_config_action(self):
-        filtersconf = FiltersConfigurationDialog()
+    def set_mockfile_config_action(self):
+        filtersconf = MockFileConfigurationDialog()
         if filtersconf.exec_():
             res = filtersconf.get_data()
             logging.info("Filters settings is updated to: " + str(res))
@@ -932,15 +963,14 @@ class MainFrame(QtWidgets.QWidget):
                 if res != 0:
                     self.isGPSConnected = False
                     self.useGPSCheckBox.setChecked(False)
+                    self.useGPS = False
                     self.gpsConn.disconnect()
-                    self.basicGPSConfig["useGPS"] = False
                 else:
-                    self.basicGPSConfig["useGPS"] = True
+                    self.useGPS = True
                 return res
-                # QMessageBoxSample.showDialog(self, "GPS is connected! Check GPS status..", appconfig.INFO)
             else:
                 self.isGPSConnected = False
-                self.basicGPSConfig["useGPS"] = False
+                self.useGPS = False
                 self.useGPSCheckBox.setChecked(False)
                 logging.info("Unable to connect GPS!")
                 QMessageBoxSample.showDialog(self, "Failed to connect GPS!", appconfig.ERROR)
@@ -980,14 +1010,14 @@ class MainFrame(QtWidgets.QWidget):
 
     def use_mock_data(self):
         if self.useMockCheckBox.isChecked():
-            self.realTime = False
-            self.collectGPSThread.realtime = self.realTime
+            self.useRadar = False
+            self.collectGPSThread.realtime = self.useRadar
             self.findWayToHome.init_vars()
             self.priorCounterLable.setText("0")
             self.unregisteredCounterLabel.setText("0")
         else:
-            self.realTime = True
-            self.collectGPSThread.realtime = self.realTime
+            self.useRadar = True
+            self.collectGPSThread.realtime = self.useRadar
             self.findWayToHome.init_vars()
             self.priorCounterLable.setText("0")
             self.unregisteredCounterLabel.setText("0")
@@ -996,7 +1026,7 @@ class MainFrame(QtWidgets.QWidget):
         """
         The action should be done before close the program.
         """
-        if self.realTime and self.conn.connected:
+        if self.useRadar and self.conn.connected:
             self.conn.disconnect()
         # self.gpsConn.disconnect()
 
@@ -1073,7 +1103,7 @@ class CollectionThread(QThread):
     def __init__(self, parent=None, freq=0.1):
         super(CollectionThread, self).__init__()
         self.freq = freq
-        self.setStackSize(10240)
+        # self.setStackSize(10240)
         self.isOn = True
         self.gpsConn = ''
         self.realtime = False
@@ -1081,7 +1111,6 @@ class CollectionThread(QThread):
     def run(self):
         if self.gpsConn == '' and self.realtime:
             logging.error("no gps connexion config...")
-
             self.isOn = False
         else:
             while self.isOn:
@@ -1105,10 +1134,11 @@ class CollectionThread(QThread):
 
     def stop(self):
         # 改变线程状态与终止
-        self.qmut.lock()
-        self.isexit = True
-        self.qmut.unlock()
-        self.wait()
+        self.isOn = False
+        if self.realtime:
+            self.gpsConn.disconnect()
+        else:
+            self.realtime = False
 
     @property
     def signal_updateUI(self):

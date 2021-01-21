@@ -31,7 +31,7 @@ def clean_realtime_data(aTuple):
 
 def search_radar_title(aTuple):
     for index, ele in enumerate(aTuple):
-        if ele == 29268 and aTuple[index + 1] == 29268 and aTuple[index + 2] == 4095:
+        if ele == 29268 and aTuple[index + 1] == 29268:
             return index
     return -1
 

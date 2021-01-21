@@ -281,6 +281,7 @@ class FindWayToHome(object):
         """
         This function aims to show the results of 2 times measurements.
         """
+        print("Draw Pic..")
         GPStrackTemp = np.array(self.GPStrack)
 
         plt.figure()
