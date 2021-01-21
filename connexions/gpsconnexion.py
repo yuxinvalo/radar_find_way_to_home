@@ -41,7 +41,6 @@
 import logging
 import time
 
-import pynmea2
 import serial
 
 import appconfig
@@ -64,6 +63,9 @@ def parseParity(parityBit):
 
 
 class GPSConnexion(Connexion):
+    """
+    It controls the GPS connexion, heritage Connexion class
+    """
     def __init__(self, configDict):
         super(Connexion, self).__init__()
         appconfig.basic_log_config()
@@ -118,23 +120,18 @@ class GPSConnexion(Connexion):
             maxTry -= 1
         return errorhandle.GPS_NO_RETURN_DATA, errorhandle.GPS_NO_RETURN_DATA
 
-    # 36 here means ==> '$'
-    # And [index:-2] means slice chain from $ to checksum post
-    # \r is at the last position which must be removed.
-    @staticmethod
-    def catch_GGA_data(gpsRealTimeData):
-        ggaData = []
-        gga = ''
-        for ele in gpsRealTimeData:
-            for index, j in enumerate(ele):
-                if j == 36 and str(ele[index + 1:index + 6], encoding='utf-8') in ['GPGGA', 'GNGGA']:
-                    gga = str(ele[index:-2], encoding='utf-8')
-                    ggaData.append(gga)
-                    continue
-        return ggaData
-
     @staticmethod
     def check_GGA_data(gpsLineData):
+        """
+        Check if the argument in is an GNGGA or GPGGA data
+        Tips: 36 here means ==> '$'
+              And [index + 1:index + 6] means slice chain from $ to title GPGGA or GNGGA
+
+        :param gpsLineData: A chain of bytes
+        :return: an empty string if the argument in is not a legal GGA data the
+        whole GGA data without other trash data, it looks like $GPGGA,184353.07,1929.045,S,02410.506,E,1,04,2.6,
+        100.00,M,-33.9,M,,0000*6D
+        """
         gga = ''
         for index, j in enumerate(gpsLineData):
             if j == 36 and str(gpsLineData[index + 1:index + 6], encoding='utf-8', errors='ignore') in ['GPGGA',

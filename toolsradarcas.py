@@ -6,37 +6,75 @@ import random
 import struct
 import time
 
+import appconfig
 import errorhandle
 from value import respath
 
 
 def byte_2_signedInt(bdata):
+    """
+    Convert bytes to signed integer
+
+    :param bdata: the chain of byte to convert
+    :return: matched singed integer as Tuple
+    """
     count = len(bdata) / 2
     integers = struct.unpack('h' * int(count), bdata)
     return integers
 
 
 def hex_Instruction_2_bytes(instruction):
+    """
+    Pack hex data to byte, it will be invoked while sending instructions to radar
+
+    :param instruction: the data send to radar
+    :return: matched bytes
+    """
     return struct.pack("%dB" % (len(instruction)), *instruction)
 
 
 def signedInt_2_byte(sdata):
+    """
+    Pack the signed integer to byte, this function is invoked while merging radar and gps data as GPR
+
+    :param sdata: a list contains singed integer
+    :return: the matched bytes
+    """
     return struct.pack("%dh" % (len(sdata)), *sdata)
 
 
 # Del title info like 29268, 29268, 4095, 2296
 def clean_realtime_data(aTuple):
+    """
+    Rip out the title of data received from data
+
+    :param aTuple: a list of radar data
+    :return: the data without title
+    """
     return aTuple[4: -1]
 
 
 def search_radar_title(aTuple):
+    """
+    Search radar title index[29268, 29268], it's aim to resolve leak of data while using measurement wheel
+
+    :param aTuple: a list or a tuple of data
+    :return: the index of title
+            -1 if no title found
+    """
     for index, ele in enumerate(aTuple):
-        if ele == 29268 and aTuple[index + 1] == 29268:
+        if ele == appconfig.RADAR_HEADER[0] and aTuple[index + 1] == appconfig.RADAR_HEADER[1]:
             return index
     return -1
 
 
 def calculate_dist_per_line(measWheelConfig):
+    """
+    Calculate the coefficient of wheel and pulse in radar
+
+    :param measWheelConfig: current measurement wheel configurations
+    :return: the distance per pulse, the pulse number per centimeter, distance per data receive
+    """
     distPerPulse = round((measWheelConfig.get("measWheelDiameter") / measWheelConfig.get("pulseCountPerRound")), 4)
     pulsePerCM = round(1 / distPerPulse, 4)
     distPerLine = distPerPulse * int(pulsePerCM)  # round(distPerPulse * pulsePerCM, 4)
@@ -45,6 +83,14 @@ def calculate_dist_per_line(measWheelConfig):
 
 @DeprecationWarning
 def saveDataNumpy(data, filepath, instType='radar'):
+    """
+    Don't use this!
+
+    :param data:
+    :param filepath:
+    :param instType:
+    :return:
+    """
     import numpy as np
     if not filepath:
         filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
@@ -53,6 +99,20 @@ def saveDataNumpy(data, filepath, instType='radar'):
 
 
 def save_data(data, filepath='', format='pickle', instType='radar', times=0):
+    """
+    Save data according to arguments in
+
+    :param data: the data you want to save
+    :param filepath: the file you want to save to
+    :param format: save data as pickle or GPR, but numpy is not suggested to use
+    :param instType: it's a flag to help user to identify the data, it will be added at the end of file name
+    :param times: it's also a flag to help user to identify the origin of data like instType
+    :return: filename if the data is saved without exception
+    :return: errorhandle.UNKNOWN_FILE_FORMAT if the format attributes is not in [picker, numpy, GPR]
+    :return: errorhandle.SAVE_GPR_IOERROR if an exception occurs while saving GPR file
+    :return: errorhandle.SAVE_GPR_TYPEERROR if the data is not in byte
+    :return: errorhandle.SAVE_PICKLE_ERROR if an exception occurs while saving data as pickle file
+    """
     if format == 'pickle':
         return save_data_pickle(data, filepath, instType, times)
     elif format == 'numpy':
@@ -94,9 +154,12 @@ def save_data_pickle(data, filepath='', instType='radar', times=0):
         filepath = respath.DEFAULT_DATA_NAME + filename
     else:
         filepath = filepath + '/' + filename
-    f = open(filepath, 'wb')
-    pickle.dump(data, f)
-    f.close()
+    try:
+        f = open(filepath, 'wb')
+        pickle.dump(data, f)
+        f.close()
+    except:
+        return errorhandle.SAVE_PICKLE_ERROR
     return f.name
 
 
@@ -109,6 +172,14 @@ def count(data, limit):
 
 
 def loadFile(filename=''):
+    """
+    Load pickle format file
+
+    :param filename: the filename, if the filename is not the full path, the program will search it in default data directory
+    :return: the data loaded
+    :return: errorhandle.UNKNOWN_FILE_FORMAT if the file suffix is not end with .pkl or npy
+    :return: errorhandle.LOAD_FILE_IO_ERROR if an exception occurs while loading file
+    """
     import pickle
     import numpy as np
     f = ""
@@ -135,7 +206,15 @@ def loadFile(filename=''):
             f.close()
 
 
+@DeprecationWarning
 def list2numpy(data, dataType='byte'):
+    """
+    The function allows converts data to numpy.adarray, it's not suggested to use
+
+    :param data:
+    :param dataType:
+    :return:
+    """
     import numpy as np
     if dataType == 'byte':
         dataTrans = []
@@ -180,6 +259,14 @@ def bin2mat_transform2(bin_file, shape_h=1024, order='F'):
 
 
 def fill_gga(gga, index):
+    """
+    This function is used in DEBUG mode, just to fill the empty GGA data from that trash GPS,
+    it merges a coefficient to make the mock data looks like the reality
+
+    :param gga: a line of GGA, like $GPGGA,,,,,,,,,,,,,*59
+    :param index: an accumulated coefficient
+    :return: a fake GGA string like $GPGGA,,42.58,,116.587,,,,55,,,,
+    """
     latitude = round(3959 + (0.2 * random.random() + index * 0.001), 4)
     longitude = round(11619 + (0.1 * random.random() - index * 0.001), 4)
     altitude = round(50 + random.randint(0, 10) + random.random(), 4)

@@ -41,14 +41,14 @@ class TestToolClass:
         measParams = calculate_dist_per_line(measWheelConfig)
         assert measParams == (0.0872, 11.4679, 0.9592), 'Calculate measurement wheel parameters exception!'
 
-    def test_list2numpy(self):
-        import numpy as np
-        bytesData = loadFile("./test_data/rawdata56.pkl")
-        assert len(bytesData) == 56, "Test data file changed maybe?"
-
-        npObj = list2numpy(bytesData)
-        assert isinstance(npObj, np.ndarray)
-        assert npObj.shape == (56, 1024)
+    # def test_list2numpy(self):
+    #     import numpy as np
+    #     bytesData = loadFile("./test_data/rawdata56.pkl")
+    #     assert len(bytesData) == 56, "Test data file changed maybe?"
+    #
+    #     npObj = list2numpy(bytesData)
+    #     assert isinstance(npObj, np.ndarray)
+    #     assert npObj.shape == (56, 1024)
 
     def test_loadFile(self):
         res = loadFile()
@@ -90,7 +90,7 @@ class TestToolClass:
             gpsData = gpsData[:radarData.shape[0], :]
         assert radarData.shape[0] == gpsData.shape[0]
         gprObj = GPRTrace()
-        gprData = gprObj.pack_GRP_data(gpsData.tolist(), radarData.tolist())
+        gprData = gprObj.pack_GPR_data(gpsData.tolist(), radarData.tolist())
         exceptLength = FILE_INFO_BYTE_NUM + (ENTITLE_SIZE * 1128) + (1024 * 2 * 1128)
         assert exceptLength == len(gprData)
         
@@ -104,7 +104,7 @@ class TestToolClass:
         assert len(gpsData) == len(radarData)
 
         gprObj = GPRTrace()
-        gprData = gprObj.pack_GRP_data(gpsData, radarData)
+        gprData = gprObj.pack_GPR_data(gpsData, radarData)
         assert type(gprData) == bytes
         exceptLength = FILE_INFO_BYTE_NUM + (ENTITLE_SIZE * len(radarData)) + (1024 * 2 * len(radarData))
         assert len(gprData) == exceptLength

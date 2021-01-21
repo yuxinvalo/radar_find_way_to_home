@@ -8,13 +8,15 @@ from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QGridLayout, QFormLayout
 
 import appconfig
-import toolsradarcas
 import value.strings as strs
 from configuration import ConfigurationDialog
 from dialogmsgbox import QMessageBoxSample
 
 
 class RadarConfigurationDialog(ConfigurationDialog):
+    """
+    Radar configuration view
+    """
     def __init__(self, defaultConfig):
         super(ConfigurationDialog, self).__init__()
         self.defaultConf = defaultConfig
@@ -176,6 +178,13 @@ class RadarConfigurationDialog(ConfigurationDialog):
 
 
 def build_instruments(radarConfig, measWheelParams):
+    """
+    To build radar configuration instruction according to current configuration
+
+    :param radarConfig: current radar configuration
+    :param measWheelParams: current measurement wheel parameters
+    :return: the instruction byte which will be sent to radar
+    """
     import math
     bytesNum = int(math.log(radarConfig.get("bytesNum"))/math.log(2) - 9)
     sampleRate = int(radarConfig.get("sampleFreq") / 5.25)
