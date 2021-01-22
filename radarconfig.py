@@ -55,6 +55,22 @@ class RadarConfigurationDialog(ConfigurationDialog):
         sampleFreqList.remove(currSampleFreq)
         self.sampleFreqCombox.addItems(self.translate_combox(self.checkList(sampleFreqList)))
 
+        self.pipeNum = QtWidgets.QLabel(strs.strings.get("pipeNum")[appconfig.language])
+        self.pipeNum.setObjectName("pipeNum")
+        self.pipeNumEdit = QtWidgets.QLineEdit()
+        self.pipeNumEdit.setToolTip("The size of radar pipes")
+        self.pipeNumEdit.setObjectName("pipeNumEdit")
+        self.pipeNumEdit.setText(str(self.defaultConf.get("pipeNum")))
+        self.pipeNumEdit.setValidator(QIntValidator(0, 10))
+
+        self.startPipeIndex = QtWidgets.QLabel(strs.strings.get("startPipeIndex")[appconfig.language])
+        self.startPipeIndex.setObjectName("startPipeIndex")
+        self.startPipeIndexEdit = QtWidgets.QLineEdit()
+        self.startPipeIndexEdit.setToolTip("The start cutoff pipe index")
+        self.startPipeIndexEdit.setObjectName("startPipeIndexEdit")
+        self.startPipeIndexEdit.setText(str(self.defaultConf.get("startPipeIndex")))
+        self.startPipeIndexEdit.setValidator(QIntValidator(0, 10))
+
         self.patchSize = QtWidgets.QLabel(strs.strings.get("patchSize")[appconfig.language])
         self.patchSize.setObjectName("patchSize")
         self.patchSizeEdit = QtWidgets.QLineEdit()
@@ -111,6 +127,8 @@ class RadarConfigurationDialog(ConfigurationDialog):
 
         self.configLayout.addRow(strs.strings.get("sampleNum")[appconfig.language], self.sampleNumCombox)
         self.configLayout.addRow(strs.strings.get("sampleFreq")[appconfig.language], self.sampleFreqCombox)
+        self.configLayout.addRow(strs.strings.get("pipeNum")[appconfig.language], self.pipeNumEdit)
+        self.configLayout.addRow(strs.strings.get("startPipeIndex")[appconfig.language], self.startPipeIndexEdit)
         self.configLayout.addRow(strs.strings.get("patchSize")[appconfig.language], self.patchSizeEdit)
         self.configLayout.addRow(strs.strings.get("deltaDist")[appconfig.language], self.deltaDistEdit)
         self.configLayout.addRow(strs.strings.get("firstCutRow")[appconfig.language], self.firstCutRowEdit)
@@ -155,10 +173,16 @@ class RadarConfigurationDialog(ConfigurationDialog):
             if firstCutRow < 4:
                 QMessageBoxSample.showDialog(self, "FirstCutRow show be greater than 4!", appconfig.ERROR)
 
+        if int(self.startPipeIndexEdit.text()) > int(self.pipeNumEdit.text()):
+            QMessageBoxSample.showDialog(self, "Start Pipe Index must be lesser than Pipe Size! ", appconfig.ERROR)
+            return
+
         radarSettings = {
             "bytesNum": int(int(self.sampleNumCombox.currentText()) * 2),
             "sampleNum": int(self.sampleNumCombox.currentText()),
             "sampleFreq": float(self.sampleFreqCombox.currentText()[0:-3]),
+            "pipeNum": int(self.pipeNumEdit.text()),
+            "startPipeIndex": int(self.startPipeIndexEdit.text()),
             "patchSize": int(self.patchSizeEdit.text()),
             "deltaDist": float(self.deltaDistEdit.text()),
             "firstCutRow": int(self.firstCutRowEdit.text()),
@@ -166,7 +190,6 @@ class RadarConfigurationDialog(ConfigurationDialog):
             "unregisteredMapInterval": int(self.unregisteredMapIntervalEdit.text()),
             "appendNum": int(self.appendNumCombox.currentText()),
             "collectionMode": self.collectionModeCombox.currentText(),
-            "instruments": ""
         }
         return radarSettings
 
@@ -211,11 +234,11 @@ def build_instruments(radarConfig, measWheelParams):
 
 # inst = build_instruments(appconfig.basic_radar_config(), [0.0872, 11.4678, 0.9592])
 # print(toolsradarcas.hexInstruction2Byte(inst))
-# if __name__ == "__main__":
-#     import sys
-#     app = QtWidgets.QApplication(sys.argv)
-#     v = RadarConfigurationDialog(appconfig.basic_radar_config())
-#     if v.exec_():
-#         res = v.get_data()
-#         print(res)
-#     sys.exit(app.exec_())
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    v = RadarConfigurationDialog(appconfig.basic_radar_config())
+    if v.exec_():
+        res = v.get_data()
+        print(res)
+    sys.exit(app.exec_())

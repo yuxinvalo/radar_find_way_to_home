@@ -62,6 +62,8 @@ strings = {
     "priorMapInterval": ['第一次裁剪间隔', 'Prior Map Interval'],
     "unregisteredMapInterval": ['第二次裁剪间隔', 'Unregistered Map Interval'],
     "appendNum": ['特征对比数', 'Feat number to compare'],
+    "startPipeIndex": ['管道截取起点', 'Start Pipe Index'],
+    "pipeNum": ['管道数量', 'Pipe Number'],
 
     "constGain": ['固定增益', 'Const. Gain'],
     "continMeas": ['连续测', 'Continuous Meas.'],

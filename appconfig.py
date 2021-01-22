@@ -46,7 +46,8 @@ def basic_radar_config():
         "sampleNum": 1024,  # 采样点数，等于字节数/2
         "sampleFreq": 10.5,  # 采样频率，可在界面修改，不推荐在这里修改
         "bscanRefreshInterval": 500,  # 灰度图刷新频率，每收到500条数据刷新一次
-        "receiveFreq": 0.02,  # 读取雷达数据的频率，每n秒收一次， 最好0.02秒，如果出现卡顿，可以放到0.03
+        "receiveFreq": 0.01,  # 读取雷达数据的频率，每n秒收一次， 最好0.02秒，如果出现卡顿，可以放到0.03
+        "receiveFreqMocks": 0.02,
         "calculateFreq": 0.1,  # 计算Feats的频率，每n秒计算一次， 最好设置为 读取雷达数据频率*5， 这样可以同步，并减少线程工作量， 若出现卡顿，可以放慢一点
         "patchSize": 416,  # 切割数据大小，可以在界面设置
         "priorMapInterval": 5,  # prior窗口裁剪，每收5个数据计算新窗口特征，可以在界面设置
@@ -55,6 +56,8 @@ def basic_radar_config():
         "deltaDist": 0.0138,  # 两个步骤之间的距离差，可以在界面设置
         "appendNum": 2,  # 对比特征数，可以在界面设置
         "collectionMode": '连续测',  # 雷达测试模式，可以在界面设置
+        "startPipeIndex": 0,  # 接收多道数据时，所需要数据的管道的索引号， 例如从第二个管道截取，就是2
+        "pipeNum": 1,  # 雷达的发送信息的通道数
     }
     return basicRadarConfig
 

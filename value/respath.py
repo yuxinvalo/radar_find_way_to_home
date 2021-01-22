@@ -5,6 +5,7 @@ GPS_CONFIG_ICON = "res/png-0011.png"
 RADAR_CONFIG_ICON = "res/png-0011.png"
 SYSTEM_CONFIG_ICON = "res/png-0011.png"
 MESWHELL_CONFIG_ICON = "res/png-0011.png"
+MOCK_FILE_CONFIG_ICON = "res/filechooser.jpg"
 PATH_CONFIG_ICON = "res/png-0057.png"
 PROGRAM_ICON = "res/wave.jpg"
 
