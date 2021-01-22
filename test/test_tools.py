@@ -105,7 +105,7 @@ class TestToolClass:
 
         gprObj = GPRTrace()
         gprData = gprObj.pack_GPR_data(gpsData, radarData)
-        assert type(gprData) == bytes
+        assert type(gprData) == bytearray
         exceptLength = FILE_INFO_BYTE_NUM + (ENTITLE_SIZE * len(radarData)) + (1024 * 2 * len(radarData))
         assert len(gprData) == exceptLength
 
