@@ -82,7 +82,7 @@ class MainFrame(QtWidgets.QWidget):
         self.init_chart_panel()
         self.init_state_panel()
         self.set_widgets_enable()
-        # self.init_note_perf()  # =================FOR DEBUG=======================
+        self.init_note_perf()  # =================FOR DEBUG=======================
 
         # Init threads=================
         self.collectRadarThread = WorkThread(freq=self.basicRadarConfig.get("receiveFreq"))
@@ -317,12 +317,13 @@ class MainFrame(QtWidgets.QWidget):
         self.perfColRadar = "col Radar"
         self.perfColGPS = "col GPS"
         self.perfCal = "calcualte"
-        self.drawTime = "draw"
+        self.drawGPS = "drawGPS"
+        self.drawWave = "drawWave"
         # self.perf = {self.perfColRadar:[], self.perfColGPS:[], self.perfCal:[], self.drawTime:[]}
         self.perfTrans2NP = "trans"
         self.perfAppendNP = "append"
         self.perf = {self.perfTrans2NP: [], self.perfAppendNP: [], self.perfColRadar: [], self.perfColGPS: [],
-                     self.perfCal: [], self.drawTime: []}
+                     self.perfCal: [], self.drawGPS: [], self.drawWave: []}
 
     def counter_data(self):
         """
@@ -530,7 +531,7 @@ class MainFrame(QtWidgets.QWidget):
             while collecting stoped and numWindow == 0: stop all and init radarNPData, but the prior measurement data like
                 GPS, feats is still in memory.
         """
-        # caltime = time.clock()
+        caltime = time.clock()
         if self.measTimes == 1:
             logging.debug("Start calculate===>Counter : " + str(self.counter) + " Current calculate index: " + str(
                 self.findWayToHome.patchSize + (self.numWindow * self.basicRadarConfig.get("priorMapInterval"))))
@@ -608,13 +609,13 @@ class MainFrame(QtWidgets.QWidget):
                 self.maxTryRadar = 3
                 # self.findWayToHome.init_vars()
         self.lastCounter = self.counter
-        # self.perf.get(self.perfCal).append(time.clock() - caltime)
+        self.perf.get(self.perfCal).append(time.clock() - caltime)
 
     def start_radar_collection_action(self):
-        # colRadarTime = time.clock()
+        colRadarTime = time.clock()
         global cleanPlots
         global reversePlots
-        # trans = time.clock()
+        trans = time.clock()
         """
             Radar data collector thread will invoke this method with frequency define at appconfig.py
             There is 2 mode of collection: realtime or not realtime
@@ -635,6 +636,9 @@ class MainFrame(QtWidgets.QWidget):
                         logging.error("Radar collecting exception with code: " + str(bytesData))
                         logging.warning("Stop collection because of radar disconnection!")
                         self.stop_collection_action()
+                        self.conn.connected = False
+                        QMessageBoxSample.showDialog(self, "Exception occurs while receiving data from radar, "
+                                                           "error code: " + str(bytesData), appconfig.ERROR)
                         return
                     else:
                         return
@@ -719,8 +723,8 @@ class MainFrame(QtWidgets.QWidget):
             # =========================================<<<
 
             cleanPlots = toolsradarcas.clean_realtime_data(plots)
-            # self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
-            # append = time.clock()
+            self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
+            append = time.clock()
             self.findWayToHome.radarData.append(plots)
 
         else:  # Mock realtime data
@@ -731,19 +735,20 @@ class MainFrame(QtWidgets.QWidget):
                 return
             cleanPlots = self.mockData[self.counter].tolist()
             self.findWayToHome.radarData.append(cleanPlots)
-            # self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
-            # append = time.clock()
+            self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
+            append = time.clock()
         self.counter += 1
 
          # ======================Performance===============
-        # self.perf.get(self.perfAppendNP).append(time.clock() - append)
-        # self.perf[self.perfTrans2NP].append(time.clock()-colRadarTime)
-        # if len(self.perf[self.perfAppendNP]) % 1000 == 0:
-        #     res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
-        #     print("Save perf file : " + str(res))
-        #     self.init_note_perf()
+        self.perf.get(self.perfAppendNP).append(time.clock() - append)
+        self.perf[self.perfColRadar].append(time.clock()-colRadarTime)
+        if len(self.perf[self.perfColRadar]) % 1000 == 0:
+            res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
+            logging.debug("Save perf file : " + str(res))
+            self.init_note_perf()
 
     def draw_pic_action(self):
+        draw = time.clock()
         global cleanPlots
         if self.isCollecting:
             self.chartPanel.handle_data(cleanPlots)
@@ -756,26 +761,25 @@ class MainFrame(QtWidgets.QWidget):
                 self.bscanPanel.plot_bscan(
                     self.findWayToHome.radarData[self.basicRadarConfig.get("bscanRefreshInterval") * -1:-1])
         QApplication.processEvents()
+        self.perf[self.drawWave].append(time.clock() - draw)
 
     def draw_GPS_action(self):
-        # draw = time.clock()
+        draw = time.clock()
         try:
             if self.isCollecting:
                 if self.measTimes == 1:
                     if len(self.findWayToHome.gpsData) > 0:  # Sometimes thread stop after initializing gpsData
                         self.gpsPanel.scatter_gps_points(self.findWayToHome.gpsData[-1], 1)
                 elif self.measTimes == 2 and len(self.findWayToHome.GPStrack) > self.gpsTraceTemp:
-                    print(len(self.findWayToHome.GPStrack), end=" | ")
-                    print(self.gpsTraceTemp)
                     self.gpsPanel.scatter_gps_points(self.findWayToHome.GPStrack[-1], 2)
                     self.gpsTraceTemp = len(self.findWayToHome.GPStrack)
         except Exception as e:
             logging.error("Exception when drawing panel.." + str(e))
         QApplication.processEvents()
-        # self.perf[self.drawTime].append(time.clock() - draw)
+        self.perf[self.drawGPS].append(time.clock() - draw)
 
     def start_gps_collection_action(self, gga):
-        # colGPSTime = time.clock()
+        colGPSTime = time.clock()
         """
             GPS collector aims to receive GPS serial data,  for each data send back, it will be parsed to GGA/GNS(GPS/beidou)
             format and retrieves latitude, longitude and altitude as a list and save in memory.
@@ -816,7 +820,7 @@ class MainFrame(QtWidgets.QWidget):
                 singleGPSCleanData = self.mockGPSData[self.gpsCounter]
                 self.findWayToHome.gpsData.append(singleGPSCleanData)
                 self.gpsCounter += 1
-        # self.perf.get(self.perfColGPS).append(time.clock() - colGPSTime)
+        self.perf.get(self.perfColGPS).append(time.clock() - colGPSTime)
 
     def stop_collection_action(self):
         """
@@ -846,8 +850,9 @@ class MainFrame(QtWidgets.QWidget):
 
         if self.useRadar:
             logging.info("Send stop instruction to Radar")
-            if not self.conn or not self.conn.connected:
-                QMessageBoxSample.showDialog(self, "Connexion is already down!", appconfig.WARNING)
+            if not self.conn.connected:
+                logging.info("Radar Connexion is already down! Send nothing.. ")
+                # QMessageBoxSample.showDialog(self, "Connexion is already down!", appconfig.WARNING)
             else:
                 stopInstruct = toolsradarcas.hex_Instruction_2_bytes(appconfig.basic_instruct_config().get("stop"))
                 if self.conn.send(stopInstruct) != 0:
@@ -1166,7 +1171,7 @@ class CollectionThread(QThread):
                         if len(line) == 0:
                             self.emptyCounter += 1
                             if self.emptyCounter >= self.timeoutEmptyData:
-                                logging.error("Receive more than " + str(self.timeoutEmptyData) + "from GPS, it maybe "
+                                logging.error("Receive more than " + str(self.timeoutEmptyData) + " from GPS, it maybe "
                                                                                                   "offline..")
                                 self._signal_updateUI.emit(str(errorhandle.GPS_LOST_CONNEXION))
                                 self.stop()
@@ -1174,7 +1179,7 @@ class CollectionThread(QThread):
                             self.emptyCounter = 0
                         gga = self.gpsConn.check_GGA_data(line)
                         if gga != '':
-                            print("Found: " + str(gga))
+                            logging.debug("Found: " + str(gga))
                             self._signal_updateUI.emit(str(gga))
                         else:
                             continue

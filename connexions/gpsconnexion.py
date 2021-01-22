@@ -109,6 +109,7 @@ class GPSConnexion(Connexion):
         pass
 
     # Receive next GGA
+    @DeprecationWarning
     def recv(self):
         maxTry = 10
         while maxTry > 0:
@@ -118,7 +119,7 @@ class GPSConnexion(Connexion):
                 if len(gga) > 0:
                     return gga
             maxTry -= 1
-        return errorhandle.GPS_NO_RETURN_DATA, errorhandle.GPS_NO_RETURN_DATA
+        return errorhandle.GPS_NO_RETURN_DATA
 
     @staticmethod
     def check_GGA_data(gpsLineData):

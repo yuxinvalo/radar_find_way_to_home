@@ -127,7 +127,7 @@ class WirelessConnexion(Connexion):
                         logging.error("NET receives Radar data failure.." + str(e))
                         return errorhandle.RECV_DATA_ERROR
         else:
-            logging.error("Socket disconnect when trying to send data..")
+            logging.error("Socket disconnect when trying to receive data..")
             return errorhandle.DISCONNECT_ERROR
         return res
 

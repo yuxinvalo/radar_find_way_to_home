@@ -76,7 +76,7 @@ def basic_gps_config():
         "parityBit": 'NONE',  # 忘了是啥，可以在界面设置
         "dataBit": 8,  # 数据位，可以在界面设置
         "stopBit": 1.0,  # 停止位，可以在界面设置
-        "timeoutEmptyData": 50,  # 连续接了N条全空数据后自动停止采集，有可能是GPS太远或者关机引起
+        "timeoutEmptyData": 30,  # 连续接了N条全空数据后自动停止采集，有可能是GPS太远或者关机引起
         "gpsGraphRefreshInterval": 3,  # 刷新GPS图的频率，2-5秒尚可，如果低于2秒，提醒一波：这是个随着点数增加所用时间也增加的量，容易导致卡死
     }
     return basicGPSConfig

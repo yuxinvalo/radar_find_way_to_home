@@ -128,7 +128,6 @@ class FindWayToHome(object):
         print("GPS data length: " + str(len(self.gpsData)))
         if numWindow == 0:
             windowsGPSXYZMatrix = np.asarray(self.gpsData[headIndex:headIndex + self.patchSize]).T
-            print(windowsGPSXYZMatrix.shape)
             windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
             if moveMode == ALLER_RETOUR:
                 windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
@@ -141,7 +140,7 @@ class FindWayToHome(object):
                 windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
             self.gpsNPData = np.append(self.gpsNPData, windowsGPSXYZMatrix, axis=1)
 
-        print("GPSNP DATA SHAPE:" + str(self.gpsNPData.shape))
+        # print("GPSNP DATA SHAPE:" + str(self.gpsNPData.shape))
 
         priorMap = np.expand_dims(singleWindowRadarData, axis=0)
 
@@ -281,7 +280,6 @@ class FindWayToHome(object):
         """
         This function aims to show the results of 2 times measurements.
         """
-        print("Draw Pic..")
         GPStrackTemp = np.array(self.GPStrack)
 
         plt.figure()
