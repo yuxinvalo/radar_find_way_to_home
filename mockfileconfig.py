@@ -3,12 +3,11 @@
 # Author: syx10
 # Time 2020/12/29:9:13
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import QFormLayout, QFileDialog
 
 import appconfig
-from configuration import ConfigurationDialog
 import value.strings as strs
+from configuration import ConfigurationDialog
 
 PRIOR = 0
 UNREGISTERED = 1

@@ -41,15 +41,6 @@ class TestToolClass:
         measParams = calculate_dist_per_line(measWheelConfig)
         assert measParams == (0.0872, 11.4679, 0.9592), 'Calculate measurement wheel parameters exception!'
 
-    # def test_list2numpy(self):
-    #     import numpy as np
-    #     bytesData = loadFile("./test_data/rawdata56.pkl")
-    #     assert len(bytesData) == 56, "Test data file changed maybe?"
-    #
-    #     npObj = list2numpy(bytesData)
-    #     assert isinstance(npObj, np.ndarray)
-    #     assert npObj.shape == (56, 1024)
-
     def test_loadFile(self):
         res = loadFile()
         assert res == errorhandle.UNKNOWN_FILE_NAME, "Error handle should be UNKNOWN_FILE_NAME-" + \
@@ -78,6 +69,12 @@ class TestToolClass:
         os.unlink(filename)
         filename = save_data(data, filepath, 'GBR')
         assert filename == errorhandle.UNKNOWN_FILE_FORMAT
+
+    def test_load_gpr_file(self):
+        gpsData, radarData = GPRTrace.load_GPR_data("./test_data/testGPR_radar.pkl", samplePoint=1024)
+        # gpsData, radarData = GPRTrace.load_GPR_data("E:/RadarCAS/data/2021_01_25_16_28_55.GPR", samplePoint=1024)
+        assert gpsData.shape == (3, 2929)
+        assert len(radarData) == 2929
 
     def test_combine_GPR(self):
         radarData = loadFile("./test_data/testGPRRadar.pkl").T
@@ -109,7 +106,4 @@ class TestToolClass:
         exceptLength = FILE_INFO_BYTE_NUM + (ENTITLE_SIZE * len(radarData)) + (1024 * 2 * len(radarData))
         assert len(gprData) == exceptLength
 
-    def load_gpr_file(self):
-        gpsData, radarData = GPRTrace.load_GPR_data("./test_data/testGPR_radar.pkl", samplePoint=1024)
-        assert gpsData.shape == (3, 657)
-        assert len(radarData) == 657
+

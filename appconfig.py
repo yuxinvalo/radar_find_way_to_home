@@ -74,7 +74,7 @@ def basic_gps_config():
     basicGPSConfig = {
         "receiveFreq": 0.05,  # 真实GPS收到数据之后的休眠时间，最好0.05秒, 反正都是0.5秒左右才收到1条，可以在界面设置
         "receiveFreqMock": 0.02,  # 模拟GPS读取数据的频率，最好和Radar的收数据频率保持同步，可以在界面设置
-        "serialNum": 'COM7',  # GPS串口号，可以在界面设置
+        "serialNum": 'COM4',  # GPS串口号，可以在界面设置
         "baudRate": 9600,  # GPS波特率，可以在界面设置
         "parityBit": 'NONE',  # 忘了是啥，可以在界面设置
         "dataBit": 8,  # 数据位，可以在界面设置

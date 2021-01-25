@@ -26,6 +26,9 @@ strings = {
 
     "priorCounter": ['Prior数据长度', 'Prior Data Length'],
     "unregisteredCounter": ['Unregistered数据长度', 'Unrgt. Data Length'],
+    "freqConfig": ["更新频率", "Update frequency"],
+    "calFeatCounter": ['当前特征计算索引', 'Feats Counter Index'],
+    "toGPR": ['融合GPR', 'Convert GPR'],
 
     "yes": ['确定', 'YES'],
     "no": ['取消', 'NO'],
@@ -93,6 +96,19 @@ strings = {
     "priorMocks": ['Prior模拟数据', 'Prior Mock File'],
     "unregisteredMocks": ['Unregistered模拟数据', 'Unregistered Mock File'],
     "gpsMocks": ['GPS模拟数据', 'GPS Mock File'],
+
+    # Frequency Config
+    "radarReceiveFreq": ['实时雷达接收频率', 'Radar Collector Freq.'],
+    "radarMockReceiveFreq": ['模拟雷达接收频率', 'Mock radar collector Freq.'],
+    "bscanRefreshInterval": ['灰度图更新间隔', 'BSCAN Refresh Interval'],
+    "calculateFreq": ['计算特征频率', 'Calculate frequency'],
+    "gpsReceiveFreq": ['实时GPS接收频率', 'GPS Collector Freq.'],
+    "gpsReceiveMockFreq": ['模拟GPS接收频率', 'GPS Collector Freq'],
+    "gpsGraphRefreshInterval": ['GPS点图更新频率', 'GPS Refresh Interval'],
+
+    # Merge GPR
+    "radarFile": ['雷达数据', 'Radar Data File'],
+    "gpsFile": ['GPS数据', 'GPS Data File'],
 }
 
 combobox = {

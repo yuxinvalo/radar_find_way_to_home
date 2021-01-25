@@ -80,12 +80,12 @@ class MeasTimesConfigDialog(ConfigurationDialog):
         pass
 
 
-if __name__ == "__main__":
-    import sys
-
-    app = QtWidgets.QApplication(sys.argv)
-    v = MeasTimesConfigDialog()
-    if v.exec_():
-        res = v.get_data()
-        print(res)
-    sys.exit(app.exec_())
+# if __name__ == "__main__":
+#     import sys
+#
+#     app = QtWidgets.QApplication(sys.argv)
+#     v = MeasTimesConfigDialog()
+#     if v.exec_():
+#         res = v.get_data()
+#         print(res)
+#     sys.exit(app.exec_())

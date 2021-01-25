@@ -35,7 +35,6 @@ class GPRTrace(object):
         super(GPRTrace, self).__init__()
         self.fileInfoByte = bytes(FILE_INFO_BYTE_NUM)
         self.samplePoints = samplePoints
-        # fileEntitle = structure_entitle()
 
     def fill_info(self):
         gpsOffset = struct.pack('f', random.randint(0, 10) * 1.1)
@@ -78,6 +77,8 @@ class GPRTrace(object):
         """
         if len(gpsPoints) == 2:
             gpsPoints.append(0)
+        if len(gpsPoints) != 3:
+            return errorhandle.PACK_GPR_GPS_SHAPE_ERROR
         gpsPointsBytes = struct.pack('3d', gpsPoints[0], gpsPoints[1],
                                      gpsPoints[2])
         return gpsPointsBytes
@@ -151,6 +152,9 @@ class GPRTrace(object):
         return package
 
     def pack_GPR_data(self, gpsPoints, radarData):
+        print(self.samplePoints)
+        if self.samplePoints not in [256, 512, 1024, 2048, 4096]:
+            return errorhandle.PACK_GPR_SAMPLE_NUM_ERROR
         if len(gpsPoints) != len(radarData):
             return errorhandle.PACK_GPS_RADAR_SHAPE_ERROR
         exceptedLen = FILE_INFO_BYTE_NUM + (self.samplePoints * len(radarData) * 2) + \

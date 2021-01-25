@@ -17,6 +17,8 @@ PACK_GPS_RADAR_SHAPE_ERROR=203  # 打包GPR文件时，GPS和雷达数据规格�
 SAVE_GPR_TYPEERROR=204  # 保存GPR文件时，数据为非二进制格式
 SAVE_GPR_IOERROR=205  # 保存在GPR文件时不成功
 SAVE_PICKLE_ERROR=206  # 保存为PICKLE文件不成功
+PACK_GPR_GPS_SHAPE_ERROR=207  # 保存为GPR文件时，读取GPS数据长度不正确
+PACK_GPR_SAMPLE_NUM_ERROR=208  # 保存为GPR文件时，SamplePoints不为256，512，1024，2048，4096之一
 
 UNKNOWN_MEAS_TIMES=210  # 测量Flag（prior, unregistered）不明确， 应该不会出现这个错误吧
 FIRST_MEAS_DATANUM_LEAK=211  # 计算特征时，雷达数据累积量不够
