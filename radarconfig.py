@@ -138,10 +138,6 @@ class RadarConfigurationDialog(ConfigurationDialog):
         self.configLayout.addRow(strs.strings.get("appendNum")[appconfig.language], self.appendNumCombox)
         self.configLayout.addRow(strs.strings.get("collectionMode")[appconfig.language], self.collectionModeCombox)
 
-        # PyQt chart
-        self.placeholder = QtWidgets.QLabel("This is a wave show place holder!!!!")
-        # self.waveLayout.addWidget(self.placeholder)
-
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
@@ -234,11 +230,11 @@ def build_instruments(radarConfig, measWheelParams):
 
 # inst = build_instruments(appconfig.basic_radar_config(), [0.0872, 11.4678, 0.9592])
 # print(toolsradarcas.hexInstruction2Byte(inst))
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    v = RadarConfigurationDialog(appconfig.basic_radar_config())
-    if v.exec_():
-        res = v.get_data()
-        print(res)
-    sys.exit(app.exec_())
+# if __name__ == "__main__":
+#     import sys
+#     app = QtWidgets.QApplication(sys.argv)
+#     v = RadarConfigurationDialog(appconfig.basic_radar_config())
+#     if v.exec_():
+#         res = v.get_data()
+#         print(res)
+#     sys.exit(app.exec_())

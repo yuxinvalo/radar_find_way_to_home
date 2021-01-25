@@ -90,7 +90,7 @@ class WirelessConnexion(Connexion):
                         return 0
                 except Exception as e:
                     if tryTimes < self.writeTimeOut:
-                        time.sleep(0.2)
+                        time.sleep(0.1)
                         logging.error(e)
                         tryTimes += 1
                         continue
@@ -119,11 +119,12 @@ class WirelessConnexion(Connexion):
                     break
                 except Exception as e:
                     if tryTimes < self.readTimeOut:
+                        logging.warning("Try to recv data from radar : " + str(tryTimes))
                         tryTimes += 1
-                        time.sleep(0.2)
+                        time.sleep(0.1)
                         continue
                     else:
-                        self.connected = False
+                        # self.connected = False
                         logging.error("NET receives Radar data failure.." + str(e))
                         return errorhandle.RECV_DATA_ERROR
         else:

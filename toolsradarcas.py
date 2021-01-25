@@ -241,23 +241,6 @@ def bin2mat_transform(bin_file, shape_h=1024, order='F'):
     # data = data[:, :18000]
     return data.T
 
-
-def bin2mat_transform2(bin_file, shape_h=1024, order='F'):
-    '''
-    将bin文件转成numpy矩阵形式
-    RadarViewer输出的bin order是F
-    python numpy tofile输出的bin order是C（此条不确定）
-    '''
-    import numpy as np
-
-    assert bin_file.suffix == '.bin'
-    data = np.fromfile(str(bin_file), dtype=np.float64)
-    data = data.reshape(shape_h, int(len(data) / shape_h), order=order)
-    # data = np.fliplr(data[:, -18000:-1])
-    # data = data[:, -18000:-1]
-    return data.T
-
-
 def fill_gga(gga, index):
     """
     This function is used in DEBUG mode, just to fill the empty GGA data from that trash GPS,

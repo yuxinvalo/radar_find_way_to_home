@@ -55,9 +55,8 @@ class FindWayToHome(object):
         self.init_vars()
 
     def init_vars(self):
-        print("Init findwaytohome vars...")
+        # print("Init findwaytohome vars...")
         self.radarData = []
-        self.radarNPData = np.zeros((1, 1))  # This will be a numpy format variable
         self.gpsData = []
         self.gpsNPData = []
         self.priorFeats = []
@@ -146,8 +145,6 @@ class FindWayToHome(object):
 
         self.firstDBIndexes.append(numWindow * self.priorMapInterval + self.patchSize - 1)
         image = priorMap[0, :, :]
-        # if numWindow < 10:
-        #     self.windows.append(singleWindowRadarData)
 
         # TF handling
         feat_ = pool_feats(self.frcnn.extract_feature(image))
@@ -182,27 +179,34 @@ class FindWayToHome(object):
                 times: 1 means prior measurement, 2 means unregistered measurement
         """
         if times == 1:
-            gprFile = self.combineGPR_data()
-            saveGPR = toolsradarcas.save_data(gprFile, format='GPR', times=1)
-            if type(saveGPR) != int:
-                self.files.append(saveGPR)
-            else:
-                logging.info("Save GPR data exception with error code: " + str(saveGPR))
+            # gprFile = self.combineGPR_data()
+            # saveGPR = toolsradarcas.save_data(gprFile, format='GPR', times=1)
+            # if type(saveGPR) != int:
+            #     self.files.append(saveGPR)
+            # else:
+            #     logging.info("Save GPR data exception with error code: " + str(saveGPR))
 
             featsFile = toolsradarcas.save_data(self.priorFeats, format='pickle', instType='feats', times=1)
             if type(featsFile) != int:
                 self.files.append(featsFile)
             else:
                 logging.info("Save feats data exception with error code: " + str(featsFile))
-            # self.files.append(toolsradarcas.save_data(self.radarData, format='pickle', times=1))
-            # self.files.append(toolsradarcas.save_data(self.gpsData, format='pickle', instType='gps', times=1))
-            # self.files.append(toolsradarcas.save_data(self.windows, format='pickle', instType='windows', times=1))
+            radarFile = toolsradarcas.save_data(self.radarData, format='pickle', times=1)
+            if type(radarFile) != int:
+                self.files.append(radarFile)
+            else:
+                logging.info("Save radar data exception with error code: " + str(featsFile))
+
+            gpsFile = toolsradarcas.save_data(self.gpsData, format='pickle', instType='gps', times=1)
+            if type(gpsFile) != int:
+                self.files.append(gpsFile)
+            else:
+                logging.info("Save GPS data exception with error code: " + str(featsFile))
 
             # Prepare for second measurement
             for i in range(self.priorFeats.shape[0]):
                 self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
             self.radarData.clear()
-            self.windows.clear()
         else:
             radarFile = toolsradarcas.save_data(self.radarData, format='pickle', times=2)
             if type(radarFile) != int:
@@ -232,9 +236,6 @@ class FindWayToHome(object):
 
         singleWindowRadarData = np.asarray(self.radarData[headIndex:headIndex + self.patchSize]).T
         singleWindowRadarData = singleWindowRadarData[self.firstCutRow:self.firstCutRow + self.patchSize, :]
-
-        # if numWindow < 10:
-        #     self.windows.append(singleWindowRadarData)
 
         if isClean:
             singleWindowRadarData = RemoveBackground(singleWindowRadarData)

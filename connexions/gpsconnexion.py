@@ -109,9 +109,8 @@ class GPSConnexion(Connexion):
         pass
 
     # Receive next GGA
-    @DeprecationWarning
     def recv(self):
-        maxTry = 10
+        maxTry = 20
         while maxTry > 0:
             line = self.conn.readline()
             if len(line) > 0:
