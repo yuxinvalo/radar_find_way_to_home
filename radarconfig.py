@@ -218,6 +218,11 @@ def build_instruments(radarConfig, measWheelParams):
     instruments.append(appconfig.basic_instruct_config().get("sampleFreq")[0])
     instruments.append(sampleRate)
 
+    if radarConfig.get("pipeNum") > 1:
+        instruments.extend(appconfig.basic_instruct_config().get("timeLag"))
+        instruments.extend(appconfig.basic_instruct_config().get("gainMode"))
+        instruments.extend(appconfig.basic_instruct_config().get("gainValue"))
+
     # Measurement Wheel
     colMode = radarConfig.get("collectionMode")
     if colMode in strs.strings.get("wheelMeas"):

@@ -54,7 +54,7 @@ def clean_realtime_data(aTuple):
     return aTuple[4: -1]
 
 
-def search_radar_title(aTuple):
+def search_radar_title(aTuple, pipeNum):
     """
     Search radar title index[29268, 29268], it's aim to resolve leak of data while using measurement wheel
 
@@ -62,10 +62,12 @@ def search_radar_title(aTuple):
     :return: the index of title
             -1 if no title found
     """
+    radarHeader = [ele*256 + 29268 for ele in range(0, pipeNum)]
     for index, ele in enumerate(aTuple):
-        if ele == appconfig.RADAR_HEADER[0] and aTuple[index + 1] == appconfig.RADAR_HEADER[1]:
-            return index
-    return -1
+        if ele in radarHeader:
+            if aTuple[index + 1] == ele:
+                return index, ele
+    return -1, None
 
 
 def calculate_dist_per_line(measWheelConfig):

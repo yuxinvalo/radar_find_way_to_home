@@ -21,8 +21,6 @@ DIST_PER_PULSE = 0
 PULSE_PER_CM = 1
 DIST_PER_LINE = 2
 
-RADAR_HEADER = [29268, 29268]
-
 
 def basic_log_config(debug=True):
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s - %(funcName)s - %(lineno)d - %(message)s"
@@ -104,6 +102,9 @@ def basic_instruct_config():
         "wheelMeas": [0x0A],
         "precise": [0x0B],
         "sampleRate": [0x02],
+        "timeLag": [0x07, 0x00],
+        "gainMode": [0x03, 0x00],
+        "gainValue": [0x04, 0x03],
     }
     return instructions
 

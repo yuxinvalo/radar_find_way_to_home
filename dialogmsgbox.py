@@ -21,19 +21,24 @@ class QMessageBoxSample(QWidget):
     def showDialog(frame, msg, msgType):
         # text = self.sender().text()
         if msgType == appconfig.INFO:
-            QMessageBox.information(frame, strs.strings.get("INFO")[appconfig.language], msg,
+            res = QMessageBox.information(frame, strs.strings.get("INFO")[appconfig.language], msg,
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         elif msgType == appconfig.WARNING:
-            QMessageBox.warning(frame, strs.strings.get("WARNING")[appconfig.language], msg,
+            res = QMessageBox.warning(frame, strs.strings.get("WARNING")[appconfig.language], msg,
                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         elif msgType == appconfig.ERROR:
-            QMessageBox.critical(frame, strs.strings.get("ERROR")[appconfig.language], msg,
+            res = QMessageBox.critical(frame, strs.strings.get("ERROR")[appconfig.language], msg,
                                  QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
 
-
+        if res == QMessageBox.Yes:
+            return 0
+        else:
+            return -1
+#
+#
 # if __name__ == '__main__':
 #     app = QApplication(sys.argv)
 #     main = QMessageBoxSample()
 #     main.show()
-#     main.showDialog(main, "dksfjalkjflkdsjflkda             wawweq", 1)
+#     res = main.showDialog(main, "dksfjalkjflkdsjflkda             wawweq", 2)
 #     sys.exit(app.exec_())

@@ -152,7 +152,6 @@ class GPRTrace(object):
         return package
 
     def pack_GPR_data(self, gpsPoints, radarData):
-        print(self.samplePoints)
         if self.samplePoints not in [256, 512, 1024, 2048, 4096]:
             return errorhandle.PACK_GPR_SAMPLE_NUM_ERROR
         if len(gpsPoints) != len(radarData):

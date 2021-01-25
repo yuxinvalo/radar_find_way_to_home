@@ -3,21 +3,16 @@
 # Author: Ni Zhikang, syx10
 # Time 2021/1/4:10:05
 import logging
-import time
 
-import pynmea2
-import tensorflow as tf
-
-import errorhandle
-import toolsradarcas
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import normalize
 
+import errorhandle
+import tensorflow as tf
+import toolsradarcas
 from combinGPR import GPRTrace
 from meastimeconfig import ALLER_RETOUR
-import Tools
-import matplotlib.pyplot as plt
-import os
 
 RADAR_FILE_INDEX = 0
 GPS_FILE_INDEX = 1

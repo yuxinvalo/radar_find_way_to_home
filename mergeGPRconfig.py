@@ -13,6 +13,10 @@ GPS = 1
 
 
 class Convert2GPRConfigurationDialog(ConfigurationDialog):
+    """
+    A tools which allow users to convert gps and radar pickle file to GPR format
+    If the difference of shape bewteen this two type of data is too big(10%), it will warn users
+    """
     def __init__(self):
         super(ConfigurationDialog, self).__init__()
         self.init_ui()
