@@ -56,11 +56,12 @@ def clean_realtime_data(aTuple):
 
 def search_radar_title(aTuple, pipeNum):
     """
-    Search radar title index[29268, 29268], it's aim to resolve leak of data while using measurement wheel
+    Search radar title index like [29268, 29268], it's aim to resolve leak of data while using measurement wheel
 
     :param aTuple: a list or a tuple of data
-    :return: the index of title
-            -1 if no title found
+    :param pipeNum: the header of each pipe is difference, it accumulates 256 automatically.
+    :return the index of title, and the header
+    :return -1 if no title found
     """
     radarHeader = [ele*256 + 29268 for ele in range(0, pipeNum)]
     for index, ele in enumerate(aTuple):

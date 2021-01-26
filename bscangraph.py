@@ -26,10 +26,13 @@ class BscanGraph(FigureCanvas):
 
     def plot_bscan(self, refreshData):
         lineDataNP = np.asarray(refreshData)
-        if lineDataNP.shape[0] > 0 and lineDataNP.shape[1] > 0:
-            self.im.set_data(lineDataNP.T)
-            self.fig.canvas.draw_idle()
-        else:
-            return
+        try:
+            if lineDataNP.shape[0] > 0 and lineDataNP.shape[1] > 0:
+                self.im.set_data(lineDataNP.T)
+                self.fig.canvas.draw_idle()
+            else:
+                return
+        except Exception as e:
+            print(str(e))
 
 

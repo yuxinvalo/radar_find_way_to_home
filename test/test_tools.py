@@ -13,9 +13,10 @@ class TestToolClass:
 
     def test_search_radar_title(self):
         sampleData = loadFile("./test_data/samplePoints.pkl")
-        index = search_radar_title(sampleData[0])
+        index, header = search_radar_title(sampleData[0], 1)
         assert index == 0
-        index = search_radar_title(sampleData[1])
+        assert header == 29268
+        index, header = search_radar_title(sampleData[1], 1)
         assert index == -1
 
     def test_hexInstruction2Byte(self):

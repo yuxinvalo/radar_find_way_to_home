@@ -65,6 +65,8 @@ class FindWayToHome(object):
         self.priorMapPos = []
         self.windows = []
 
+        self.errorData = []
+
     def load_config(self, algoConfig):
         """
             In case of configurations changed, reload the current configuration
@@ -105,8 +107,18 @@ class FindWayToHome(object):
         headIndex = self.priorMapInterval * numWindow
         print("headIndex: " + str(headIndex) + " | numWindow: " + str(numWindow))
 
-        singleWindowRadarData = np.asarray(self.radarData[headIndex:headIndex + self.patchSize]).T
-        singleWindowRadarData = singleWindowRadarData[self.firstCutRow:self.firstCutRow + self.patchSize, :]
+        singleWindowRadarData = np.array(self.radarData[headIndex:headIndex + self.patchSize]).T
+        try:
+            singleWindowRadarData = singleWindowRadarData[self.firstCutRow:self.firstCutRow + self.patchSize, :]
+        except IndexError as e:
+            print("SHAPE IndexError EXCEPTION: " + str(singleWindowRadarData.shape))
+            if len(singleWindowRadarData) == self.patchSize and len(singleWindowRadarData[0]) == self.samplePoints:
+                singleWindowRadarData = np.zeros((self.samplePoints, self.patchSize))
+                for i in range(0, self.patchSize):
+                    singleWindowRadarData[:, i:i+1] = self.radarData[headIndex+i]
+            singleWindowRadarData = singleWindowRadarData[self.firstCutRow:self.firstCutRow + self.patchSize, :]
+            print(singleWindowRadarData.shape)
+        print("WINDOW SHAPE: " + str(singleWindowRadarData.shape))
 
         self.fill_GPS_data()
 
@@ -119,22 +131,18 @@ class FindWayToHome(object):
 
         # 读取每道数据对应的GPS信息并处理
         # Mocks Data:
-        print("GPS data length: " + str(len(self.gpsData)))
-        if numWindow == 0:
-            windowsGPSXYZMatrix = np.asarray(self.gpsData[headIndex:headIndex + self.patchSize]).T
-            windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
-            if moveMode == ALLER_RETOUR:
-                windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
-            self.gpsNPData = windowsGPSXYZMatrix
-        else:
-            windowsGPSXYZMatrix = np.array(self.gpsData[headIndex + self.patchSize - 5:headIndex + self.patchSize]).T
-            windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
-            # print(windowsGPSXYZMatrix.shape)
-            if moveMode == ALLER_RETOUR:
-                windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
-            self.gpsNPData = np.append(self.gpsNPData, windowsGPSXYZMatrix, axis=1)
-
-        # print("GPSNP DATA SHAPE:" + str(self.gpsNPData.shape))
+        # if numWindow == 0:
+        #     windowsGPSXYZMatrix = np.asarray(self.gpsData[headIndex:headIndex + self.patchSize]).T
+        #     windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
+        #     if moveMode == ALLER_RETOUR:
+        #         windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
+        #     self.gpsNPData = windowsGPSXYZMatrix
+        # else:
+        #     windowsGPSXYZMatrix = np.array(self.gpsData[headIndex + self.patchSize - 5:headIndex + self.patchSize]).T
+        #     windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
+        #     if moveMode == ALLER_RETOUR:
+        #         windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
+        #     self.gpsNPData = np.append(self.gpsNPData, windowsGPSXYZMatrix, axis=1)
 
         priorMap = np.expand_dims(singleWindowRadarData, axis=0)
 
@@ -143,13 +151,7 @@ class FindWayToHome(object):
 
         # TF handling
         feat_ = pool_feats(self.frcnn.extract_feature(image))
-        feat_ = np.expand_dims(feat_, axis=0)
-
-        if numWindow == 0:
-            self.priorFeats = feat_
-        else:
-            self.priorFeats = np.append(self.priorFeats, feat_, axis=0)
-            print("FIRST====NP add new feat: " + str(self.priorFeats.shape))
+        self.priorFeats.append(feat_)
 
     def fill_GPS_data(self):
         """
@@ -159,10 +161,10 @@ class FindWayToHome(object):
             delta = len(self.radarData) - len(self.gpsData)
             if delta > 0:
                 self.gpsData.extend([self.gpsData[-1]] * delta)
-                print("Fill GPS Data radar data length:" + str(len(self.radarData)) + " | gps data length:"
-                      + str(len(self.gpsData)))
+                # print("Fill GPS Data radar data length:" + str(len(self.radarData)) + " | gps data length:"
+                #       + str(len(self.gpsData)))
 
-    def save_algo_data(self, times=1):
+    def save_algo_data(self, times=1, moveMode=ALLER_RETOUR):
         """
             Save algorithm data will be invoked while measurement finish.
             For prior measurement , the gps, radar and feats will be saved.
@@ -198,10 +200,7 @@ class FindWayToHome(object):
             else:
                 logging.info("Save GPS data exception with error code: " + str(featsFile))
 
-            # Prepare for second measurement
-            for i in range(self.priorFeats.shape[0]):
-                self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
-            self.radarData.clear()
+            self.prepare_unregistered_measurement(moveMode)
         else:
             radarFile = toolsradarcas.save_data(self.radarData, format='pickle', times=2)
             if type(radarFile) != int:
@@ -217,6 +216,22 @@ class FindWayToHome(object):
             # self.files.append(toolsradarcas.save_data(self.windows, format='pickle', instType='windows', times=2))
             self.sythetic_feats()
 
+    def prepare_unregistered_measurement(self, moveMode=ALLER_RETOUR):
+        # Prepare for second measurement
+        logging.info("Converting feats to np and Normalizing feats for unregistered mode..")
+        self.priorFeats = np.array(self.priorFeats)
+        for i in range(self.priorFeats.shape[0]):
+            self.priorFeats[i, :, :] = normalize(self.priorFeats[i, :, :], axis=1)
+
+        # Transfer gpsdata as numpy
+        logging.info("Transfer GPS data to numpy...")
+        self.gpsNPData = np.array(self.gpsData)
+        self.gpsNPData = self.gpsNPData.T
+        self.gpsNPData = self.gpsNPData[:2, :]
+        if moveMode == ALLER_RETOUR:
+            self.gpsNPData = np.fliplr(self.gpsNPData)
+        self.radarData.clear()
+
     def unregistered_find_way(self, numWindow, isClean=False, endGaindB=18):
         """
         This function is similar to prior_find_way, calculate data feats then search the match window in prior window,
@@ -226,11 +241,27 @@ class FindWayToHome(object):
                 isClean: is it a must to clean data
                 endGaindB: for cleaning data
         """
+        if len(self.radarData) < (numWindow * self.unregisteredMapInterval) + self.patchSize:
+            return errorhandle.FIRST_MEAS_DATANUM_LEAK
         headIndex = self.unregisteredMapInterval * numWindow
         print("SECOND===headIndex: " + str(headIndex) + " | numWindow: " + str(numWindow))
 
         singleWindowRadarData = np.asarray(self.radarData[headIndex:headIndex + self.patchSize]).T
-        singleWindowRadarData = singleWindowRadarData[self.firstCutRow:self.firstCutRow + self.patchSize, :]
+        # if singleWindowRadarData.shape != (self.samplePoints, self.patchSize):
+        #     print("SHAPE EXCEPTION: " + str(singleWindowRadarData.shape))
+        #     return
+        try:
+            singleWindowRadarData = singleWindowRadarData[self.firstCutRow:self.firstCutRow + self.patchSize, :]
+        except IndexError as e:
+            print("SHAPE IndexError EXCEPTION: " + str(singleWindowRadarData.shape) + " | " + str(e))
+            if len(singleWindowRadarData) == 416 and len(singleWindowRadarData[0]) == 1024:
+                singleWindowRadarData = np.zeros((1024, 416))
+                for i in range(0, 416):
+                    singleWindowRadarData[:, i:i + 1] = self.radarData[headIndex + i]
+            else:
+                print("Convert window exception ....")
+                return
+            print(singleWindowRadarData.shape)
 
         if isClean:
             singleWindowRadarData = RemoveBackground(singleWindowRadarData)

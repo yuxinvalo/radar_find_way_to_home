@@ -34,7 +34,7 @@ from mockfileconfig import MockFileConfigurationDialog
 from findwaytohome import FindWayToHome
 from gpsconfig import GPSConfigurationDialog
 from gpsgraph import GPSGraph
-from meastimeconfig import MeasTimesConfigDialog
+from meastimeconfig import MeasTimesConfigDialog, ALLER_RETOUR
 from measurementwheelconfig import MeasurementWheelConfigurationDialog
 from radarconfig import RadarConfigurationDialog, build_instruments
 from value import respath
@@ -347,12 +347,10 @@ class MainFrame(QtWidgets.QWidget):
         """
         self.perfColRadar = "col Radar"
         self.perfColGPS = "col GPS"
-        self.perfCal = "calcualte"
+        self.perfCal = "calculate"
         self.drawGPS = "drawGPS"
         self.drawWave = "drawWave"
-        self.perfTrans2NP = "trans"
-        self.perfAppendNP = "append"
-        self.perf = {self.perfTrans2NP: [], self.perfAppendNP: [], self.perfColRadar: [], self.perfColGPS: [],
+        self.perf = {self.perfColRadar: [], self.perfColGPS: [],
                      self.perfCal: [], self.drawGPS: [], self.drawWave: []}
 
     def counter_data(self):
@@ -619,7 +617,12 @@ class MainFrame(QtWidgets.QWidget):
                 self.numWindow = 0
                 self.maxTryGPS = 3
                 self.maxTryRadar = 3
-                self.findWayToHome.save_algo_data(1)
+                self.findWayToHome.save_algo_data(1, self.moveMode)
+
+                #============Performance handling==================
+                # res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
+                # logging.debug("Save perf file : " + str(res))
+                # self.init_note_perf()
 
             elif self.isCollecting == False and self.numWindow == 0:
                 self.startButton.setEnabled(True)
@@ -682,10 +685,6 @@ class MainFrame(QtWidgets.QWidget):
         # self.perf.get(self.perfCal).append(time.clock() - caltime)
 
     def start_radar_collection_action(self, bytesData):
-        # colRadarTime = time.clock()
-        global cleanPlots
-        global reversePlots
-        # trans = time.clock()
         """
             Radar data collector thread will invoke this method with frequency define at appconfig.py
             There is 2 mode of collection: realtime or not realtime
@@ -695,6 +694,9 @@ class MainFrame(QtWidgets.QWidget):
                 skip to next collection turn.
                 3. Append legal data to radarData for feats calculating
         """
+        # colRadarTime = time.clock()
+        global cleanPlots
+        global reversePlots
         if self.useRadar:
             if len(bytesData) == 3:
                 self.stop_collection_action()
@@ -705,8 +707,6 @@ class MainFrame(QtWidgets.QWidget):
             if len(bytesData) == 0 and self.useWheel:
                 return
             plots = toolsradarcas.byte_2_signedInt(bytesData)
-            print("HEADER: " + str(plots[0:2]))
-
             """ To resolve data length is not enough to bytesNum, a little complex========>>>
             如果雷达发回来的数据不满1024（设定的采样点数）， 就把当前的数据保存到缓冲区和下一条数据拼接起来
             简而言之，就是保证雷达发回来的数据shape为设定的点.
@@ -733,7 +733,7 @@ class MainFrame(QtWidgets.QWidget):
                         return
                 else:
                     logging.error("Unexcepted data found: length is enough but no title found!")
-                    logging.info(plots)
+                    logging.info(plots[0:10])
                     # return
             elif title_index != 0 and len(plots) < self.basicRadarConfig.get("sampleNum"):
                 if title_index != -1:
@@ -755,31 +755,26 @@ class MainFrame(QtWidgets.QWidget):
                     elif self.buffer[0:2] != [header, header]:
                         logging.error("Buffer is not start with RADAR HEADER, Just ignore it!")
                         self.buffer = []
+                        return
                     else:
                         logging.error("Unexcepted data found: concat length is too long..Just cut it")
                         self.buffer.extend(plots[:self.basicRadarConfig.get("sampleNum") - len(self.buffer)])
-
+                        plots = self.buffer
+                        self.buffer = []
             # =========================================<<<
-
             cleanPlots = toolsradarcas.clean_realtime_data(plots)
-            # self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
-            # append = time.clock()
             self.findWayToHome.radarData.append(plots)
 
         else:  # Mock realtime data
-            # trans = time.clock()
             if self.counter == len(self.mockData) - 1:
                 logging.info("Mock data length is over....")
                 self.stop_collection_action()
                 return
             cleanPlots = self.mockData[self.counter].tolist()
             self.findWayToHome.radarData.append(cleanPlots)
-            # self.perf.get(self.perfTrans2NP).append(time.clock() - trans)
-            # append = time.clock()
         self.counter += 1
 
          # ======================Performance===============
-        # self.perf.get(self.perfAppendNP).append(time.clock() - append)
         # self.perf[self.perfColRadar].append(time.clock()-colRadarTime)
         # if len(self.perf[self.perfColRadar]) % 1000 == 0:
         #     res = toolsradarcas.save_data(self.perf, format='pickle', instType='perf', times=self.measTimes)
@@ -787,6 +782,11 @@ class MainFrame(QtWidgets.QWidget):
         #     self.init_note_perf()
 
     def draw_pic_action(self):
+        """
+        The drawing thread will execute these code per 0.01s in realtime, the frequency is same as the frequency of recv radar data.
+        - self.chartPanel.handle_data(cleanPlots) ===> draw the current wave shape
+        - self.bscanPanel.plot_bscan(..) ===> draw the bscan of last N waves
+        """
         # draw = time.clock()
         global cleanPlots
         if self.isCollecting:
@@ -904,7 +904,8 @@ class MainFrame(QtWidgets.QWidget):
         """
         The logic is simple, open the configuration panel, and configure it.
         If it's running on reatime mode, the configurations will be sent to radar, also,
-        if user use wheel to measure the moving distance, the distance label will be visible
+        if user use wheel to measure the moving distance, the distance label will be visible.
+        If the pipe size is greater than 1, the parameters like time lag, gain mode/value will be sent too.
         :return:
         """
         radarconfView = RadarConfigurationDialog(self.basicRadarConfig)
@@ -982,6 +983,9 @@ class MainFrame(QtWidgets.QWidget):
             logging.info("measurement wheel settings has no change.")
 
     def set_freq_action(self):
+        """
+        To configure the frequencies
+        """
         freqconfig = FrequencyConfigurationDialog(self.basicRadarConfig, self.basicGPSConfig)
         if freqconfig.exec_():
             res = freqconfig.get_data()
@@ -1142,19 +1146,12 @@ class MainFrame(QtWidgets.QWidget):
         Just for debug unregistered measurement
         """
         from sklearn.preprocessing import normalize
-        self.findWayToHome.radarData = toolsradarcas.loadFile("2021_01_18_09_57_04_radar1.pkl")
         self.findWayToHome.gpsData = toolsradarcas.loadFile("2021_01_18_09_57_07_gps1.pkl")
-        self.findWayToHome.gpsNPData = np.asarray(self.findWayToHome.gpsData).T
         self.findWayToHome.priorFeats = toolsradarcas.loadFile("2021_01_18_09_57_07_feats1.pkl")
-        # logging.info(self.findWayToHome.radarNPData.shape)
         logging.info(self.findWayToHome.priorFeats.shape)
-        for i in range(self.findWayToHome.priorFeats.shape[0]):
-            self.findWayToHome.priorFeats[i, :, :] = normalize(self.findWayToHome.priorFeats[i, :, :], axis=1)
-
-        self.findWayToHome.windows = []
+        self.findWayToHome.prepare_unregistered_measurement(ALLER_RETOUR)
         self.findWayToHome.files = [1, 2, 3]
         self.findWayToHome.firstDBIndexes = [index for index in np.arange(415, len(self.findWayToHome.radarData), 5)]
-        self.findWayToHome.radarData = []
         logging.info(self.findWayToHome.firstDBIndexes)
         self.priorCounterLable.setText(str(len(self.findWayToHome.radarData)))
 
@@ -1260,7 +1257,7 @@ class RadarCollectorThread(QThread):
                 stopInstruct = toolsradarcas.hex_Instruction_2_bytes(appconfig.basic_instruct_config().get("stop"))
                 sendRes = self.conn.send(stopInstruct)
                 if sendRes != 0:
-                    logging.error(self, "Error occur! Error code: " + str(sendRes), appconfig.ERROR)
+                    logging.error("Error occur! Error code: " + str(sendRes))
                     return sendRes
                 self.conn.disconnect()
         else:
