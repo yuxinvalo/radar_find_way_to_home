@@ -6,7 +6,6 @@ import random
 import struct
 import time
 
-import appconfig
 import errorhandle
 from value import respath
 
@@ -262,8 +261,8 @@ def fill_gga(gga, index):
     :param index: an accumulated coefficient
     :return: a fake GGA string like $GPGGA,,42.58,,116.587,,,,55,,,,
     """
-    latitude = round(3959 + (0.2 * random.random() + index * 0.001), 4)
-    longitude = round(11619 + (0.1 * random.random() - index * 0.001), 4)
+    latitude = round(3959 + (0.02 * random.random() + index * 0.001), 4)
+    longitude = round(11619 + (0.01 * random.random() - index * 0.001), 4)
     altitude = round(50 + random.randint(0, 10) + random.random(), 4)
     res = gga[0:6] + ",," + str(latitude) + ",," + str(longitude) + ",,,,," + str(altitude) + ",,,,"
     return res

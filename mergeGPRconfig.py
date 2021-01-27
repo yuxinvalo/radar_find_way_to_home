@@ -17,10 +17,11 @@ class Convert2GPRConfigurationDialog(ConfigurationDialog):
     A tools which allow users to convert gps and radar pickle file to GPR format
     If the difference of shape bewteen this two type of data is too big(10%), it will warn users
     """
-    def __init__(self):
+    def __init__(self, directory):
         super(ConfigurationDialog, self).__init__()
         self.init_ui()
         self.center()
+        self.directory = directory
 
     def init_ui(self):
         self.setWindowTitle(strs.strings.get("mockFileConfig")[appconfig.language])
@@ -75,7 +76,7 @@ class Convert2GPRConfigurationDialog(ConfigurationDialog):
             if type(radarData) == list and type(gpsData) == list:
                 delta = abs(len(radarData) - len(gpsData))
                 if delta > len(radarData)*0.1:
-                    resMsg = QMessageBoxSample.showDialog(self, "The difference of shape between radar and gps is:" + str(delta) +
+                    resMsg = QMessageBoxSample.showDialog(self, "The gap of shape between radar and gps is:" + str(delta) +
                                                  " Are you sure to merge them?", appconfig.WARNING)
                     if resMsg != 0:
                         return -1
@@ -92,12 +93,15 @@ class Convert2GPRConfigurationDialog(ConfigurationDialog):
                                                  str(gprData), appconfig.ERROR)
                     return -1
                 else:
-                    gprFile = toolsradarcas.save_data(gprData, format='GPR', times=1)
-                    QMessageBoxSample.showDialog(self, "GPR DATA LENGTH : " + str(len(gprData)) +
+                    gprFile = toolsradarcas.save_data(gprData, filepath=self.directory, format='GPR', times=1)
+                    if type(gprFile) == int:
+                        QMessageBoxSample.showDialog(self, "Save GPR file failed.. error code: " + str(gprFile), appconfig.ERROR)
+                    else:
+                        QMessageBoxSample.showDialog(self, "GPR DATA LENGTH : " + str(len(gprData)) +
                                                  ", saved at " + str(gprFile), appconfig.INFO)
                     return 0
             else:
-                QMessageBoxSample.showDialog(self, "Load file exception, not list..", appconfig.ERROR)
+                QMessageBoxSample.showDialog(self, "Load file exception, the data is not a list..", appconfig.ERROR)
                 return -1
         else:
             QMessageBoxSample.showDialog(self, "You didn't specify the data to merge!", appconfig.ERROR)
@@ -109,12 +113,12 @@ class Convert2GPRConfigurationDialog(ConfigurationDialog):
     def load_config(self):
         pass
 
-
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    v = Convert2GPRConfigurationDialog()
-    if v.exec_():
-        res = v.get_data()
-        print(res)
-    sys.exit(app.exec_())
+#
+# if __name__ == "__main__":
+#     import sys
+#     app = QtWidgets.QApplication(sys.argv)
+#     v = Convert2GPRConfigurationDialog()
+#     if v.exec_():
+#         res = v.get_data()
+#         print(res)
+#     sys.exit(app.exec_())

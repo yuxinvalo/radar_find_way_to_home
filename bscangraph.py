@@ -33,6 +33,7 @@ class BscanGraph(FigureCanvas):
             else:
                 return
         except Exception as e:
-            print(str(e))
+            print("Plot BSCAN EXCEPTION: " + str(e))
+            return
 
 

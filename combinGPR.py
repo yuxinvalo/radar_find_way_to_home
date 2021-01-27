@@ -12,14 +12,13 @@
 GPS信息位于第15字节
 """
 import datetime
-import struct
 import random
+import struct
 import time
 
-from pathlib2 import Path
 import numpy as np
+from pathlib2 import Path
 
-import appconfig
 import errorhandle
 import toolsradarcas
 

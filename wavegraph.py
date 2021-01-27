@@ -18,9 +18,6 @@ class WaveGraph(QWidget):
         self.data = []
         self.curve = self.pw.plot(pen='y')
         self.curve.getViewBox().invertY(True)
-        # self.pw.setXRange(graphConfig.get("Xrange")[0], graphConfig.get("Xrange")[1])
-
-
 
     def handle_data(self, data):
         t = np.arange(len(data))

@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import normalize
 
+import appconfig
 import errorhandle
 import tensorflow as tf
 import toolsradarcas
@@ -128,21 +129,6 @@ class FindWayToHome(object):
         if moveMode == ALLER_RETOUR:
             singleWindowRadarData = np.fliplr(singleWindowRadarData)
 
-        # 读取每道数据对应的GPS信息并处理
-        # Mocks Data:
-        # if numWindow == 0:
-        #     windowsGPSXYZMatrix = np.asarray(self.gpsData[headIndex:headIndex + self.patchSize]).T
-        #     windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
-        #     if moveMode == ALLER_RETOUR:
-        #         windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
-        #     self.gpsNPData = windowsGPSXYZMatrix
-        # else:
-        #     windowsGPSXYZMatrix = np.array(self.gpsData[headIndex + self.patchSize - 5:headIndex + self.patchSize]).T
-        #     windowsGPSXYZMatrix = windowsGPSXYZMatrix[:2, :]
-        #     if moveMode == ALLER_RETOUR:
-        #         windowsGPSXYZMatrix = np.fliplr(windowsGPSXYZMatrix)
-        #     self.gpsNPData = np.append(self.gpsNPData, windowsGPSXYZMatrix, axis=1)
-
         priorMap = np.expand_dims(singleWindowRadarData, axis=0)
 
         self.firstDBIndexes.append(numWindow * self.priorMapInterval + self.patchSize - 1)
@@ -150,6 +136,7 @@ class FindWayToHome(object):
 
         # TF handling
         feat_ = pool_feats(self.frcnn.extract_feature(image))
+        print("FIRST ADD NEW FEATS: " + str(feat_.shape))
         self.priorFeats.append(feat_)
 
     def fill_GPS_data(self):
@@ -160,10 +147,8 @@ class FindWayToHome(object):
             delta = len(self.radarData) - len(self.gpsData)
             if delta > 0:
                 self.gpsData.extend([self.gpsData[-1]] * delta)
-                # print("Fill GPS Data radar data length:" + str(len(self.radarData)) + " | gps data length:"
-                #       + str(len(self.gpsData)))
 
-    def save_algo_data(self, times=1, moveMode=ALLER_RETOUR):
+    def save_algo_data(self, times=1, moveMode=ALLER_RETOUR, directory=appconfig.DEFAULT_SAVE_PATH):
         """
             Save algorithm data will be invoked while measurement finish.
             For prior measurement , the gps, radar and feats will be saved.
@@ -182,37 +167,37 @@ class FindWayToHome(object):
             # else:
             #     logging.info("Save GPR data exception with error code: " + str(saveGPR))
 
-            featsFile = toolsradarcas.save_data(self.priorFeats, format='pickle', instType='feats', times=1)
+            featsFile = toolsradarcas.save_data(self.priorFeats, filepath=directory, format='pickle', instType='feats', times=1)
             if type(featsFile) != int:
                 self.files.append(featsFile)
             else:
                 logging.info("Save feats data exception with error code: " + str(featsFile))
-            radarFile = toolsradarcas.save_data(self.radarData, format='pickle', times=1)
+            radarFile = toolsradarcas.save_data(self.radarData, filepath=directory, format='pickle', times=1)
             if type(radarFile) != int:
                 self.files.append(radarFile)
             else:
                 logging.info("Save radar data exception with error code: " + str(featsFile))
 
-            gpsFile = toolsradarcas.save_data(self.gpsData, format='pickle', instType='gps', times=1)
+            gpsFile = toolsradarcas.save_data(self.gpsData, filepath=directory, format='pickle', instType='gps', times=1)
             if type(gpsFile) != int:
                 self.files.append(gpsFile)
             else:
                 logging.info("Save GPS data exception with error code: " + str(featsFile))
 
             self.prepare_unregistered_measurement(moveMode)
+
         else:
-            radarFile = toolsradarcas.save_data(self.radarData, format='pickle', times=2)
+            radarFile = toolsradarcas.save_data(self.radarData, filepath=directory, format='pickle', times=2)
             if type(radarFile) != int:
                 self.files.append(radarFile)
             else:
                 logging.error("Save unregistered radar data exception with error code: " + str(radarFile))
-            featsFile = toolsradarcas.save_data(self.unregisteredFeats, format='pickle', instType='feats', times=2)
+            featsFile = toolsradarcas.save_data(self.unregisteredFeats, filepath=directory, format='pickle', instType='feats', times=2)
             if type(featsFile) != int:
                 self.files.append(featsFile)
             else:
                 logging.info("Save unregistered feats data exception with error code: " + str(featsFile))
 
-            # self.files.append(toolsradarcas.save_data(self.windows, format='pickle', instType='windows', times=2))
             self.sythetic_feats()
 
     def prepare_unregistered_measurement(self, moveMode=ALLER_RETOUR):
@@ -246,9 +231,6 @@ class FindWayToHome(object):
         print("SECOND===headIndex: " + str(headIndex) + " | numWindow: " + str(numWindow))
 
         singleWindowRadarData = np.asarray(self.radarData[headIndex:headIndex + self.patchSize]).T
-        # if singleWindowRadarData.shape != (self.samplePoints, self.patchSize):
-        #     print("SHAPE EXCEPTION: " + str(singleWindowRadarData.shape))
-        #     return
         try:
             singleWindowRadarData = singleWindowRadarData[self.firstCutRow:self.firstCutRow + self.patchSize, :]
         except IndexError as e:

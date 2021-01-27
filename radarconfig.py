@@ -218,6 +218,7 @@ def build_instruments(radarConfig, measWheelParams):
     instruments.append(appconfig.basic_instruct_config().get("sampleFreq")[0])
     instruments.append(sampleRate)
 
+    # Multiple pipe radar configuration
     if radarConfig.get("pipeNum") > 1:
         instruments.extend(appconfig.basic_instruct_config().get("timeLag"))
         instruments.extend(appconfig.basic_instruct_config().get("gainMode"))
@@ -233,13 +234,3 @@ def build_instruments(radarConfig, measWheelParams):
         instruments.append(pulsePerCM)
     return instruments
 
-# inst = build_instruments(appconfig.basic_radar_config(), [0.0872, 11.4678, 0.9592])
-# print(toolsradarcas.hexInstruction2Byte(inst))
-# if __name__ == "__main__":
-#     import sys
-#     app = QtWidgets.QApplication(sys.argv)
-#     v = RadarConfigurationDialog(appconfig.basic_radar_config())
-#     if v.exec_():
-#         res = v.get_data()
-#         print(res)
-#     sys.exit(app.exec_())

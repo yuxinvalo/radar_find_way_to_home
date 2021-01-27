@@ -10,16 +10,14 @@ import value.strings as strs
 
 
 class QMessageBoxSample(QWidget):
+    """
+    To show a simplest dialog with different type: error, warning, information
+    """
     def __init__(self):
         super(QMessageBoxSample, self).__init__()
-        # self.initUI()
-
-    def initUI(self):
-        self.showDialog(self, "abcsfsdfsesfdfeesdfessdaw       weqweqeqeq", 2)
 
     @staticmethod
     def showDialog(frame, msg, msgType):
-        # text = self.sender().text()
         if msgType == appconfig.INFO:
             res = QMessageBox.information(frame, strs.strings.get("INFO")[appconfig.language], msg,
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)

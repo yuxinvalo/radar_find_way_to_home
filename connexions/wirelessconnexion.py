@@ -173,9 +173,10 @@ def testConnexion():
     #     if i > 25:
     #         resData.append(a.recv(1024))
     for i in range(0, 100):
-        # a.recv(1024)
-        data = toolsradarcas.byte_2_signedInt(a.recv(1024))
-        print(data[0:10])
+        raw = a.recv(1024)
+        if type(raw) != int:
+            data = toolsradarcas.byte_2_signedInt(a.recv(raw))
+
     # for i in resData:
     #     print(i)
     # saveData(resData)

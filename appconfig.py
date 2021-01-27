@@ -39,7 +39,7 @@ def basic_radar_config():
         'radarPort': 5050,  # 雷达发送数据端口，貌似没用上
         "readTimeOut": 20,  # 收数据超过N次不成功则返回, 每尝试一次sleep 0.1秒
         "writeTimeOut": 3,  # 发送数据超过N次不成功则返回，每尝试一次sleep 0.1秒
-        "maxConnTry": 1,  # 连接超过N次不成功则返回， 最好不要超过3次，否则等待时间非常长
+        "maxConnTry": 0,  # 连接超过N次不成功则返回， 最好不要超过3次，否则等待时间非常长
         "bytesNum": 2048,  # 一次读取的字节数，可以在界面修改，不推荐在这里修改
         "sampleNum": 1024,  # 采样点数，等于字节数/2
         "sampleFreq": 10.5,  # 采样频率，可在界面修改，不推荐在这里修改
