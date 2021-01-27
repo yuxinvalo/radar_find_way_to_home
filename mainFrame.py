@@ -1039,7 +1039,7 @@ class MainFrame(QtWidgets.QWidget):
 
     def merge_to_GPR(self):
         logging.info("Using Merge to GPR format tools...")
-        mergeGPR = Convert2GPRConfigurationDialog()
+        mergeGPR = Convert2GPRConfigurationDialog(self.directory)
         if mergeGPR.exec_():
             res = mergeGPR.get_data()
             if res == 0:
