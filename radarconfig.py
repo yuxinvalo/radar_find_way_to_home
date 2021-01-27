@@ -169,8 +169,8 @@ class RadarConfigurationDialog(ConfigurationDialog):
             if firstCutRow < 4:
                 QMessageBoxSample.showDialog(self, "FirstCutRow show be greater than 4!", appconfig.ERROR)
 
-        if int(self.startPipeIndexEdit.text()) > int(self.pipeNumEdit.text()):
-            QMessageBoxSample.showDialog(self, "Start Pipe Index must be lesser than Pipe Size! ", appconfig.ERROR)
+        if int(self.startPipeIndexEdit.text()) >= int(self.pipeNumEdit.text()):
+            QMessageBoxSample.showDialog(self, "Start Pipe Index must be smaller than Pipe Size! ", appconfig.ERROR)
             return
 
         radarSettings = {

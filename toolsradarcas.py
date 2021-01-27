@@ -54,6 +54,9 @@ def clean_realtime_data(aTuple):
     return aTuple[4: -1]
 
 
+HEADER = 29268
+
+
 def search_radar_title(aTuple, pipeNum):
     """
     Search radar title index like [29268, 29268], it's aim to resolve leak of data while using measurement wheel
@@ -63,12 +66,17 @@ def search_radar_title(aTuple, pipeNum):
     :return the index of title, and the header
     :return -1 if no title found
     """
-    radarHeader = [ele*256 + 29268 for ele in range(0, pipeNum)]
+    radarHeader = [ele*256 + HEADER for ele in range(0, pipeNum)]
     for index, ele in enumerate(aTuple):
         if ele in radarHeader:
             if aTuple[index + 1] == ele:
                 return index, ele
     return -1, None
+
+
+def get_match_header(startPipeIndex):
+    res = HEADER + (startPipeIndex * 256)
+    return res
 
 
 def calculate_dist_per_line(measWheelConfig):
@@ -243,6 +251,7 @@ def bin2mat_transform(bin_file, shape_h=1024, order='F'):
     # data = np.fliplr(data[:, :18000])
     # data = data[:, :18000]
     return data.T
+
 
 def fill_gga(gga, index):
     """

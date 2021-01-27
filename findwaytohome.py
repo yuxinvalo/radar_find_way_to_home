@@ -117,8 +117,7 @@ class FindWayToHome(object):
                 for i in range(0, self.patchSize):
                     singleWindowRadarData[:, i:i+1] = self.radarData[headIndex+i]
             singleWindowRadarData = singleWindowRadarData[self.firstCutRow:self.firstCutRow + self.patchSize, :]
-            print(singleWindowRadarData.shape)
-        print("WINDOW SHAPE: " + str(singleWindowRadarData.shape))
+            print("Exception WINDOW SHAPE is reshaped to: " + str(singleWindowRadarData.shape))
 
         self.fill_GPS_data()
 
