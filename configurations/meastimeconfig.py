@@ -6,7 +6,7 @@ from PyQt5 import QtWidgets
 
 import appconfig
 import errorhandle
-from configuration import ConfigurationDialog
+from configurations.configuration import ConfigurationDialog
 import value.strings as strs
 
 FIRST_MEAS = 1

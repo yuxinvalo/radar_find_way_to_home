@@ -3,13 +3,9 @@
 # Author: syx10
 # Time 2020/12/29:11:15
 
-from PyQt5 import QtWidgets
-from PyQt5.QtGui import QDoubleValidator, QIntValidator
-from PyQt5.QtWidgets import QFormLayout
-
 import appconfig
-from configuration import ConfigurationDialog
 import value.strings as strs
+from configurations.configuration import ConfigurationDialog
 
 
 class SystemConfigurationDialog(ConfigurationDialog):

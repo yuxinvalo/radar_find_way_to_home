@@ -26,18 +26,19 @@ import errorhandle
 import toolsradarcas
 import value.strings as strs
 from bscangraph import BscanGraph
+from configurations.loadpriorconfig import LoadPriorConfigurationDialog
 from connexions.gpsconnexion import GPSConnexion
 from connexions.wirelessconnexion import WirelessConnexion
 from dialogmsgbox import QMessageBoxSample
 from findwaytohome import FindWayToHome
-from freqconfig import FrequencyConfigurationDialog
-from gpsconfig import GPSConfigurationDialog
+from configurations.freqconfig import FrequencyConfigurationDialog
+from configurations.gpsconfig import GPSConfigurationDialog
 from gpsgraph import GPSGraph
-from meastimeconfig import MeasTimesConfigDialog, ALLER_RETOUR
-from measurementwheelconfig import MeasurementWheelConfigurationDialog
-from mergeGPRconfig import Convert2GPRConfigurationDialog
-from mockfileconfig import MockFileConfigurationDialog
-from radarconfig import RadarConfigurationDialog, build_instruments
+from configurations.meastimeconfig import MeasTimesConfigDialog
+from configurations.measurementwheelconfig import MeasurementWheelConfigurationDialog
+from configurations.mergeGPRconfig import Convert2GPRConfigurationDialog
+from configurations.mockfileconfig import MockFileConfigurationDialog
+from configurations.radarconfig import RadarConfigurationDialog, build_instruments
 from value import respath
 from wavegraph import WaveGraph
 
@@ -85,7 +86,6 @@ class MainFrame(QtWidgets.QWidget):
         self.init_toolbar()
         self.init_chart_panel()
         self.init_state_panel()
-        self.set_widgets_enable()
         self.init_note_perf()  # =================FOR DEBUG=======================
 
         # Init threads=================
@@ -126,15 +126,15 @@ class MainFrame(QtWidgets.QWidget):
         self.setWindowIcon(QIcon(respath.PROGRAM_ICON))
         self.directory = appconfig.DEFAULT_SAVE_PATH
         self.setLayout(self.mainLayout)
-        self.useWheel = False
-        self.isCollecting = False
+
         self.buffer = []
         self.gpsTraceTemp = 0
 
-        # Vars for debugging
-        self.isLoadFirstData = False
+        self.isLoadPrior = False
         self.useRadar = False
         self.useGPS = False
+        self.useWheel = False
+        self.isCollecting = False
 
         self.counter = 0
         self.gpsCounter = 0
@@ -144,6 +144,8 @@ class MainFrame(QtWidgets.QWidget):
         self.lastCounter = 0
         self.maxTryGPS = 3
         self.maxTryRadar = 3
+
+        self.header = 29268
 
         self.mockGPSPath = respath.DEFAULT_MOCK_GPS
         self.mockRadarPPath = respath.DEFAULT_MOCK_RADAR_PRIOR
@@ -257,6 +259,14 @@ class MainFrame(QtWidgets.QWidget):
         self.toGPRBtn.setIconSize(QtCore.QSize(50, 50))
         self.toGPRBtn.clicked.connect(self.merge_to_GPR)
 
+        self.loadPriorBtn = QtWidgets.QToolButton()
+        self.loadPriorBtn.setText(strs.strings.get("loadPrior")[appconfig.language])
+        self.loadPriorBtn.setObjectName("loadPriorBtn")
+        self.loadPriorBtn.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
+        self.loadPriorBtn.setIcon(QtGui.QIcon(respath.MOCK_FILE_CONFIG_ICON))
+        self.loadPriorBtn.setIconSize(QtCore.QSize(50, 50))
+        self.loadPriorBtn.clicked.connect(self.load_origin_data)
+
         self.toolbar.addWidget(self.startButton)
         self.toolbar.addWidget(self.stopButton)
         self.toolbar.addWidget(self.radarConfigBtn)
@@ -266,7 +276,9 @@ class MainFrame(QtWidgets.QWidget):
         self.toolbar.addWidget(self.mockFileConfigBtn)
         self.toolbar.addWidget(self.pathButton)
         self.toolbar.addWidget(self.toGPRBtn)
+        self.toolbar.addWidget(self.loadPriorBtn)
         self.toolbar.addLayout(self.checkBoxLayout)
+
         self.mainLayout.addWidget(self.pathLabel, 0, 0, 1, 3)
         self.mainLayout.addWidget(configGroupBox, 1, 0, 1, 3)
 
@@ -389,10 +401,27 @@ class MainFrame(QtWidgets.QWidget):
                     4)
                 self.unregMoveDistLabel.setText(str(moveDist) + "m")
 
-    def set_widgets_enable(self):
-        pass
-        # self.sysConfigBtn.setEnabled(False)
-        # self.sysConfigBtn.setToolTip("Not implemented.")
+    def set_widgets_enable(self, startThread=True):
+        if startThread:
+            self.startButton.setEnabled(False)
+            self.stopButton.setEnabled(True)
+            self.radarConfigBtn.setEnabled(False)
+            self.gpsConfigBtn.setEnabled(False)
+            self.measWheelConfigBtn.setEnabled(False)
+            self.mockFileConfigBtn.setEnabled(False)
+            self.freqConfigBtn.setEnabled(False)
+            self.toGPRBtn.setEnabled(False)
+            self.loadPriorBtn.setEnabled(False)
+        else:
+            self.startButton.setEnabled(True)
+            self.stopButton.setEnabled(False)
+            self.radarConfigBtn.setEnabled(True)
+            self.gpsConfigBtn.setEnabled(True)
+            self.measWheelConfigBtn.setEnabled(True)
+            self.mockFileConfigBtn.setEnabled(True)
+            self.freqConfigBtn.setEnabled(True)
+            self.toGPRBtn.setEnabled(True)
+            self.loadPriorBtn.setEnabled(True)
 
     def init_connexion(self):
         """
@@ -448,11 +477,14 @@ class MainFrame(QtWidgets.QWidget):
             if res != errorhandle.UNKNOWN_MEAS_TIMES:
                 temp = res - 1
                 if temp > 1:
+                    if self.isLoadPrior:
+                        res = QMessageBoxSample.showDialog(self, "Your choice will cover the loaded prior data,"
+                                                                 " would you like to continue?",
+                                                     appconfig.WARNING)
+                        if res != 0:
+                            return
                     self.moveMode = res - 1
                     self.measTimes = 1
-                elif self.isLoadFirstData:
-                    self.load_origin_data()
-                    self.measTimes = 2
                 else:
                     if len(self.findWayToHome.gpsData) == 0:
                         QMessageBoxSample.showDialog(self, "You haven't operate the prior measurement!", appconfig.ERROR)
@@ -468,6 +500,7 @@ class MainFrame(QtWidgets.QWidget):
             self.gpsPanel.close()
             self.init_gps_panel()
             self.findWayToHome.init_vars()
+            self.isLoadPrior = False
 
         if self.useRadar and self.useGPS:
             logging.info("GPS and Radar all in real time mode!")
@@ -563,13 +596,7 @@ class MainFrame(QtWidgets.QWidget):
         self.collectRadarThread.start()
         self.drawPicThread.start()
         self.drawGPSThread.start()
-        self.startButton.setEnabled(False)
-        self.stopButton.setEnabled(True)
-        self.radarConfigBtn.setEnabled(False)
-        self.gpsConfigBtn.setEnabled(False)
-        self.measWheelConfigBtn.setEnabled(False)
-        self.mockFileConfigBtn.setEnabled(False)
-        self.freqConfigBtn.setEnabled(False)
+        self.set_widgets_enable(startThread=True)
 
         # Start find way to home Algo==========================
         self.calculateThread.start()
@@ -607,13 +634,7 @@ class MainFrame(QtWidgets.QWidget):
                 logging.info("Prior Calculate done..")
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
-                self.startButton.setEnabled(True)
-                self.stopButton.setEnabled(False)
-                self.radarConfigBtn.setEnabled(True)
-                self.gpsConfigBtn.setEnabled(True)
-                self.measWheelConfigBtn.setEnabled(True)
-                self.mockFileConfigBtn.setEnabled(True)
-                self.freqConfigBtn.setEnabled(True)
+                self.set_widgets_enable(startThread=False)
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
@@ -626,13 +647,7 @@ class MainFrame(QtWidgets.QWidget):
                 # self.init_note_perf()
 
             elif self.isCollecting == False and self.numWindow == 0:
-                self.startButton.setEnabled(True)
-                self.stopButton.setEnabled(False)
-                self.radarConfigBtn.setEnabled(True)
-                self.gpsConfigBtn.setEnabled(True)
-                self.measWheelConfigBtn.setEnabled(True)
-                self.mockFileConfigBtn.setEnabled(True)
-                self.freqConfigBtn.setEnabled(True)
+                self.set_widgets_enable(startThread=False)
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
                 self.counter = 0
@@ -653,13 +668,7 @@ class MainFrame(QtWidgets.QWidget):
                 logging.info("Unregistered Calculate done..")
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
-                self.startButton.setEnabled(True)
-                self.stopButton.setEnabled(False)
-                self.radarConfigBtn.setEnabled(True)
-                self.gpsConfigBtn.setEnabled(True)
-                self.measWheelConfigBtn.setEnabled(True)
-                self.mockFileConfigBtn.setEnabled(True)
-                self.freqConfigBtn.setEnabled(True)
+                self.set_widgets_enable(startThread=False)
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
@@ -670,13 +679,7 @@ class MainFrame(QtWidgets.QWidget):
             elif self.numWindow == 0 and not self.isCollecting:
                 self.calculateThread.stop()
                 self.calculateThread.isexit = False
-                self.startButton.setEnabled(True)
-                self.stopButton.setEnabled(False)
-                self.radarConfigBtn.setEnabled(True)
-                self.gpsConfigBtn.setEnabled(True)
-                self.measWheelConfigBtn.setEnabled(True)
-                self.mockFileConfigBtn.setEnabled(True)
-                self.freqConfigBtn.setEnabled(True)
+                self.set_widgets_enable(startThread=False)
                 self.counter = 0
                 self.numWindow = 0
                 self.maxTryGPS = 3
@@ -713,7 +716,7 @@ class MainFrame(QtWidgets.QWidget):
             如果雷达发回来的数据不满1024（设定的采样点数）， 就把当前的数据保存到缓冲区和下一条数据拼接起来
             简而言之，就是保证雷达发回来的数据shape为设定的点.
             """
-            title_index, header = toolsradarcas.search_radar_title(plots, self.basicRadarConfig.get("pipeNum"))
+            title_index = toolsradarcas.search_radar_title(plots, self.basicRadarConfig.get("pipeNum"))
             plots = list(plots)
             if title_index == 0 and len(plots) == self.basicRadarConfig.get("sampleNum"):
                 pass
@@ -748,16 +751,16 @@ class MainFrame(QtWidgets.QWidget):
                         plots = temp
                 else:
                     if len(self.buffer) + len(plots) == self.basicRadarConfig.get("sampleNum") and \
-                            self.buffer[0:2] == [header, header]:
+                            self.buffer[0:2] == [self.header, self.header]:
                         self.buffer.extend(plots)
                         plots = self.buffer
                         self.buffer = []
                     elif len(self.buffer) + len(plots) < self.basicRadarConfig.get("sampleNum") and \
-                            self.buffer[0:2] == [header, header]:
+                            self.buffer[0:2] == [self.header, self.header]:
                         self.buffer.extend(plots)
                         return
-                    elif self.buffer[0:2] != [header, header]:
-                        logging.error("Buffer is not start with RADAR HEADER, Just ignore it!")
+                    elif self.buffer[0:2] != [self.header, self.header]:
+                        logging.error("Buffer is not start with RADAR HEADER, Just ignore it!" + str(self.buffer[0:4]))
                         self.buffer = []
                         return
                     else:
@@ -807,9 +810,9 @@ class MainFrame(QtWidgets.QWidget):
             if self.isCollecting:
                 if self.measTimes == 1:
                     if len(self.findWayToHome.gpsData) > 0:  # Sometimes thread stop after initializing gpsData
-                        self.gpsPanel.scatter_gps_points(self.findWayToHome.gpsData[-1], 1)
+                        self.gpsPanel.scatter_gps_point(self.findWayToHome.gpsData[-1], 1)
                 elif self.measTimes == 2 and len(self.findWayToHome.GPStrack) > self.gpsTraceTemp:
-                    self.gpsPanel.scatter_gps_points(self.findWayToHome.GPStrack[-1], 2)
+                    self.gpsPanel.scatter_gps_point(self.findWayToHome.GPStrack[-1], 2)
                     self.gpsTraceTemp = len(self.findWayToHome.GPStrack)
         except Exception as e:
             logging.error("Exception when drawing panel.." + str(e))
@@ -870,13 +873,15 @@ class MainFrame(QtWidgets.QWidget):
         self.collectRadarThread.stop()
 
         if self.measTimes == 1:
-            logging.info("Stop GPS collection..")
+            logging.info("Stop GPS collection and set Labels..")
             self.collectGPSThread.stop()
             self.useGPSCheckBox.setChecked(False)
             self.useGPS = False
             self.gpsCounter = 0
+            self.priorCounterLable.setText(str(self.counter))
         else:
             self.gpsTraceTemp = 0  # Set GPS scatter index to 0
+            self.unregisteredCounterLabel.setText(str(self.counter))
         self.isCollecting = False
 
         logging.info("Stop Drawing thread...")
@@ -885,10 +890,11 @@ class MainFrame(QtWidgets.QWidget):
         self.drawGPSThread.stop()
         self.drawGPSThread.isexit = False
 
-        if self.measTimes == 1:
-            self.priorCounterLable.setText(str(self.counter))
-        elif self.measTimes == 2:
-            self.unregisteredCounterLabel.setText(str(self.counter))
+        self.buffer = []
+
+        # if self.isLoadPrior:
+        #     self.isLoadPrior = False
+        #     self.findWayToHome.init_vars()
 
     def gps_config_action(self):
         self.gpsconfView = GPSConfigurationDialog(self.basicGPSConfig)
@@ -947,7 +953,7 @@ class MainFrame(QtWidgets.QWidget):
                 self.basicRadarConfig["pipeNum"] = res.get("pipeNum")
                 self.basicRadarConfig["startPipeIndex"] = res.get("startPipeIndex")
                 self.collectRadarThread.reload_config(self.basicRadarConfig)
-
+                self.header = toolsradarcas.get_match_header(self.basicRadarConfig.get("startPipeIndex"))
                 if self.basicRadarConfig["collectionMode"] in strs.strings.get("wheelMeas"):
                     self.useWheel = True
                     self.collectRadarThread.useWheel = True
@@ -1050,8 +1056,8 @@ class MainFrame(QtWidgets.QWidget):
             logging.info("No merge action was operated..")
 
     def check_GPS_connect(self):
+        self.gpsConn = GPSConnexion(self.basicGPSConfig)
         if self.useGPSCheckBox.isChecked():
-            self.gpsConn = GPSConnexion(self.basicGPSConfig)
             if self.gpsConn.connect() == 0:
                 self.isGPSConnected = True
                 logging.info("GPS is connected!")
@@ -1098,20 +1104,20 @@ class MainFrame(QtWidgets.QWidget):
                 ggaObj = pynmea2.parse(gga)
                 return 0
                 # if ggaObj.lat != '' and ggaObj.lon != '':
-                #     logging.info("GPS is located!")
+                #     logging.info("GPS is located! " + str(ggaObj))
                 #     return 0
                 # else:
-                #     logging.warning("GPS is not located, can not start the measurement!")
+                #     logging.warning("GPS is not located, you can not start the GPS measurement!")
                 #     if index < maxTry:
                 #         # self.gpsConn.disconnect()
                 #         time.sleep(0.2)
-                #         self.gpsConn.reconnect()
+                #         index = index + 1
+                #         continue
                 #     else:
-                #         logging.error("Can not located GPS, can not start the measurement, please retry...")
-                #         QMessageBoxSample.showDialog(self, "Can not located GPS, can not start the measurement, "
-                #                                            "please retry after a while...", appconfig.ERROR)
+                #         logging.error("Can not located GPS, can not start the GPS measurement!")
+                #         QMessageBoxSample.showDialog(self, "Can not located GPS, you can not start the GPS measurement,"
+                #                                            " please retry after a while...", appconfig.ERROR)
                 #         return errorhandle.GPS_NOT_LOCATED
-                #     index = index + 1
         else:
             return errorhandle.GPS_CONNECT_FAILURE
 
@@ -1120,20 +1126,22 @@ class MainFrame(QtWidgets.QWidget):
             self.useRadar = False
             self.collectRadarThread.realtime = self.useRadar
             self.collectRadarThread.freq = self.basicRadarConfig.get("receiveFreqMocks")
-            self.findWayToHome.init_vars()
-            self.priorCounterLable.setText("0")
+            if not self.isLoadPrior:
+                self.findWayToHome.init_vars()
+                self.priorCounterLable.setText("0")
+                self.priorMoveDistLabel.setText("0")
             self.unregisteredCounterLabel.setText("0")
-            self.priorMoveDistLabel.setText("0")
-            self.unregisteredCounterLabel.setText("0")
+            self.unregMoveDistLabel.setText("0")
         else:
             self.useRadar = True
             self.collectRadarThread.realtime = self.useRadar
             self.collectRadarThread.freq = self.basicRadarConfig.get("receiveFreq")
-            self.findWayToHome.init_vars()
-            self.priorCounterLable.setText("0")
+            if not self.isLoadPrior:
+                self.findWayToHome.init_vars()
+                self.priorCounterLable.setText("0")
+                self.priorMoveDistLabel.setText("0")
             self.unregisteredCounterLabel.setText("0")
-            self.priorMoveDistLabel.setText("0")
-            self.unregisteredCounterLabel.setText("0")
+            self.unregMoveDistLabel.setText("0")
 
     def closeEvent(self, a0: QtGui.QCloseEvent):
         """
@@ -1150,14 +1158,28 @@ class MainFrame(QtWidgets.QWidget):
         """
         Just for debug unregistered measurement
         """
-        self.findWayToHome.gpsData = toolsradarcas.loadFile("2021_01_27_14_42_16_gps1.pkl")
-        self.findWayToHome.priorFeats = toolsradarcas.loadFile("2021_01_27_14_42_11_feats1.pkl")
-        logging.info(len(self.findWayToHome.priorFeats))
-        self.findWayToHome.prepare_unregistered_measurement(ALLER_RETOUR)
-        self.findWayToHome.files = [1, 2, 3]
-        self.findWayToHome.firstDBIndexes = [index for index in np.arange(415, len(self.findWayToHome.gpsData), 5)]
-        logging.info(self.findWayToHome.firstDBIndexes[0:10])
-        self.priorCounterLable.setText(str(len(self.findWayToHome.gpsData)))
+        logging.info("Using Loading Prior Data function...")
+        loadPrior = LoadPriorConfigurationDialog(self.directory)
+        if loadPrior.exec_():
+            res = loadPrior.get_data()
+            if type(res) != int:
+                self.findWayToHome.gpsData = res.get("gpsData")
+                self.findWayToHome.priorFeats = res.get("featsData")
+                logging.info("Loading feats length: " + str(len(self.findWayToHome.priorFeats)))
+                logging.info("Loading gps length: " + str(len(self.findWayToHome.gpsData)))
+                self.findWayToHome.prepare_unregistered_measurement(res.get("moveMode"))
+                self.findWayToHome.firstDBIndexes = [index for index in
+                                                     np.arange(415, len(self.findWayToHome.gpsData), 5)]
+                self.priorCounterLable.setText(str(len(self.findWayToHome.gpsData)))
+                self.gpsPanel.scatter_gps_points(self.findWayToHome.gpsNPData)
+                self.isLoadPrior = True
+                QApplication.processEvents()
+            else:
+                logging.info("User uses Loading Prior Data...with error exit code: " + str(res))
+                self.isLoadPrior = False
+        else:
+            self.isLoadPrior = False
+            logging.info("No loading action was executed..")
 
 
 class WorkThread(QThread):

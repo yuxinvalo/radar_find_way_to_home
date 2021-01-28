@@ -5,7 +5,7 @@ import appconfig
 import toolsradarcas
 import value.strings as strs
 from combinGPR import GPRTrace
-from configuration import ConfigurationDialog
+from configurations.configuration import ConfigurationDialog
 from dialogmsgbox import QMessageBoxSample
 
 RADAR = 0

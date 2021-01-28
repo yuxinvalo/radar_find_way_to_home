@@ -13,7 +13,7 @@ import errorhandle
 import tensorflow as tf
 import toolsradarcas
 from combinGPR import GPRTrace
-from meastimeconfig import ALLER_RETOUR
+from configurations.meastimeconfig import ALLER_RETOUR
 
 RADAR_FILE_INDEX = 0
 GPS_FILE_INDEX = 1
@@ -51,7 +51,7 @@ class FindWayToHome(object):
         self.init_vars()
 
     def init_vars(self):
-        # print("Init findwaytohome vars...")
+        print("Init findwaytohome vars...")
         self.radarData = []
         self.gpsData = []
         self.gpsNPData = []

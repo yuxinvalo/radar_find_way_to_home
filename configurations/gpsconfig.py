@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QGridLayout
 
 import appconfig
 import value.strings as strs
-from configuration import ConfigurationDialog
+from configurations.configuration import ConfigurationDialog
 
 
 class GPSConfigurationDialog(ConfigurationDialog):

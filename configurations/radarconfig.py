@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QGridLayout, QFormLayout
 
 import appconfig
 import value.strings as strs
-from configuration import ConfigurationDialog
+from configurations.configuration import ConfigurationDialog
 from dialogmsgbox import QMessageBoxSample
 
 

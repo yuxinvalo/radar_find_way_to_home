@@ -3,7 +3,7 @@ from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QFormLayout
 
 import appconfig
-from configuration import ConfigurationDialog
+from configurations.configuration import ConfigurationDialog
 import value.strings as strs
 from dialogmsgbox import QMessageBoxSample
 

@@ -29,6 +29,7 @@ strings = {
     "freqConfig": ["更新频率", "Update frequency"],
     "calFeatCounter": ['当前特征计算索引', 'Feats Counter Index'],
     "toGPR": ['融合GPR', 'Convert GPR'],
+    "loadPrior": ['载入Prior数据', 'Load Prior Data'],
 
     "yes": ['确定', 'YES'],
     "no": ['取消', 'NO'],
@@ -109,6 +110,7 @@ strings = {
     # Merge GPR
     "radarFile": ['雷达数据', 'Radar Data File'],
     "gpsFile": ['GPS数据', 'GPS Data File'],
+    "featsFile": ['Feats文件', 'Feats File'],
 }
 
 combobox = {

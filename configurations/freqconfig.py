@@ -1,4 +1,4 @@
-from configuration import ConfigurationDialog
+from configurations.configuration import ConfigurationDialog
 import value.strings as strs
 import appconfig
 

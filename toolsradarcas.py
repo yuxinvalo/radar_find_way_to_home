@@ -69,8 +69,8 @@ def search_radar_title(aTuple, pipeNum):
     for index, ele in enumerate(aTuple):
         if ele in radarHeader:
             if aTuple[index + 1] == ele:
-                return index, ele
-    return -1, None
+                return index
+    return -1
 
 
 def get_match_header(startPipeIndex):

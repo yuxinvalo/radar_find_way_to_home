@@ -2,7 +2,7 @@ import matplotlib as plt
 from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-
+import numpy as np
 plt.use('Qt5Agg')
 
 
@@ -22,7 +22,7 @@ class GPSGraph(FigureCanvas):
                                    QtWidgets.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def scatter_gps_points(self, gpsPoints, times):
+    def scatter_gps_point(self, gpsPoints, times):
         if times == 1:
             self.axes.scatter(gpsPoints[0], gpsPoints[1], c='b')
         else:
@@ -32,3 +32,7 @@ class GPSGraph(FigureCanvas):
     def clear_points(self):
         self.axes.cla()
 
+    def scatter_gps_points(self, gpsPoints):
+        # gpsPointsNP = np.array(gpsPoints).T
+        self.axes.scatter(gpsPoints[0], gpsPoints[1], c='b')
+        self.fig.canvas.draw_idle()

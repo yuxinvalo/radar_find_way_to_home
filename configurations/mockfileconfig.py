@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QFormLayout, QFileDialog
 
 import appconfig
 import value.strings as strs
-from configuration import ConfigurationDialog
+from configurations.configuration import ConfigurationDialog
 
 PRIOR = 0
 UNREGISTERED = 1
