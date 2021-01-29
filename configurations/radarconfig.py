@@ -78,7 +78,7 @@ class RadarConfigurationDialog(ConfigurationDialog):
                                       + self.sampleNumCombox.currentText())
         self.patchSizeEdit.setObjectName("firstCutNumEdit")
         self.patchSizeEdit.setText(str(self.defaultConf.get("patchSize")))
-        self.patchSizeEdit.setValidator(QIntValidator(0, 5000))
+        self.patchSizeEdit.setEnabled(False)
 
         self.deltaDist = QtWidgets.QLabel(strs.strings.get("deltaDist")[appconfig.language])
         self.deltaDist.setObjectName("deltaDist")

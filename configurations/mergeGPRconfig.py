@@ -24,7 +24,7 @@ class Convert2GPRConfigurationDialog(ConfigurationDialog):
         self.directory = directory
 
     def init_ui(self):
-        self.setWindowTitle(strs.strings.get("mockFileConfig")[appconfig.language])
+        self.setWindowTitle(strs.strings.get("toGPR")[appconfig.language])
         self.setGeometry(200, 300, 500, 100)
         self.configLayout = QFormLayout()
 
